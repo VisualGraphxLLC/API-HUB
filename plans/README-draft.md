@@ -1,6 +1,6 @@
-# VG Integration Hub
+# API-HUB
 
-![VG Integration Hub Dashboard](../docs/screenshot-dashboard.png)
+![API-HUB Dashboard](../docs/screenshot-dashboard.png)
 
 A middleware platform connecting 994+ PromoStandards wholesale suppliers to OnPrintShop (OPS) storefronts. Eliminates the $3K/year per-customer API integration fee by automating catalog sync, pricing, and product push through a supplier-agnostic pipeline.
 
@@ -85,7 +85,7 @@ A middleware platform connecting 994+ PromoStandards wholesale suppliers to OnPr
 ## Project Structure
 
 ```
-vg-integration-hub/
+api-hub/
 ├── backend/
 │   ├── main.py                        # FastAPI app — registers all routers
 │   ├── database.py                    # Async engine + EncryptedJSON type decorator

@@ -1,4 +1,4 @@
-# VG Integration Hub — Master Plan
+# API-HUB — Master Plan
 
 ## Vision
 
@@ -76,7 +76,7 @@ VisualGraphx Integration Hub — pulls product catalogs from 994+ PromoStandards
 ## File Structure
 
 ```
-vg-integration-hub/
+api-hub/
   .gitignore
   .env
   docker-compose.yml
@@ -153,7 +153,7 @@ Already done. These files exist in the repo. Verify:
 - [ ] **Step 1: Verify project state**
 
 ```bash
-cd vg-integration-hub
+cd api-hub
 ls -la
 # Expected: .env, .gitignore, docker-compose.yml, backend/
 ```
@@ -184,7 +184,7 @@ pip install -r requirements.txt
 - [ ] **Step 5: Commit**
 
 ```bash
-cd vg-integration-hub
+cd api-hub
 git add -A
 git commit -m "chore: project setup with PostgreSQL and encryption support"
 ```
@@ -198,7 +198,7 @@ git commit -m "chore: project setup with PostgreSQL and encryption support"
 
 - [ ] **Step 1: Write database.py**
 
-Write `vg-integration-hub/backend/database.py`:
+Write `api-hub/backend/database.py`:
 
 ```python
 import json
@@ -268,7 +268,7 @@ git commit -m "feat: database engine with EncryptedJSON type decorator"
 
 - [ ] **Step 1: Write suppliers/models.py**
 
-Write `vg-integration-hub/backend/modules/suppliers/models.py`:
+Write `api-hub/backend/modules/suppliers/models.py`:
 
 ```python
 import uuid as uuid_mod
@@ -303,7 +303,7 @@ class Supplier(Base):
 
 - [ ] **Step 2: Write suppliers/schemas.py**
 
-Write `vg-integration-hub/backend/modules/suppliers/schemas.py`:
+Write `api-hub/backend/modules/suppliers/schemas.py`:
 
 ```python
 from datetime import datetime
@@ -353,7 +353,7 @@ git commit -m "feat: Supplier model with encrypted auth_config and schemas"
 
 - [ ] **Step 1: Write catalog/models.py**
 
-Write `vg-integration-hub/backend/modules/catalog/models.py`:
+Write `api-hub/backend/modules/catalog/models.py`:
 
 ```python
 import uuid as uuid_mod
@@ -403,7 +403,7 @@ class ProductVariant(Base):
 
 - [ ] **Step 2: Write catalog/schemas.py**
 
-Write `vg-integration-hub/backend/modules/catalog/schemas.py`:
+Write `api-hub/backend/modules/catalog/schemas.py`:
 
 ```python
 from datetime import datetime
@@ -469,7 +469,7 @@ git commit -m "feat: Product and ProductVariant models with schemas"
 
 - [ ] **Step 1: Write ps_directory/client.py**
 
-Write `vg-integration-hub/backend/modules/ps_directory/client.py`:
+Write `api-hub/backend/modules/ps_directory/client.py`:
 
 ```python
 import httpx
@@ -501,7 +501,7 @@ async def get_ps_endpoints(company_code: str) -> list[dict]:
 
 - [ ] **Step 2: Write ps_directory/schemas.py**
 
-Write `vg-integration-hub/backend/modules/ps_directory/schemas.py`:
+Write `api-hub/backend/modules/ps_directory/schemas.py`:
 
 ```python
 from pydantic import BaseModel
@@ -524,7 +524,7 @@ class PSEndpoint(BaseModel):
 
 - [ ] **Step 3: Write suppliers/service.py**
 
-Write `vg-integration-hub/backend/modules/suppliers/service.py`:
+Write `api-hub/backend/modules/suppliers/service.py`:
 
 ```python
 from datetime import datetime, timedelta, timezone
@@ -576,7 +576,7 @@ git commit -m "feat: PS directory client and supplier endpoint caching service"
 
 - [ ] **Step 1: Write suppliers/routes.py**
 
-Write `vg-integration-hub/backend/modules/suppliers/routes.py`:
+Write `api-hub/backend/modules/suppliers/routes.py`:
 
 ```python
 from uuid import UUID
@@ -674,7 +674,7 @@ async def get_supplier_endpoints(supplier_id: UUID, db: AsyncSession = Depends(g
 
 - [ ] **Step 2: Write ps_directory/routes.py**
 
-Write `vg-integration-hub/backend/modules/ps_directory/routes.py`:
+Write `api-hub/backend/modules/ps_directory/routes.py`:
 
 ```python
 from fastapi import APIRouter
@@ -697,7 +697,7 @@ async def list_endpoints(code: str):
 
 - [ ] **Step 3: Write catalog/routes.py**
 
-Write `vg-integration-hub/backend/modules/catalog/routes.py`:
+Write `api-hub/backend/modules/catalog/routes.py`:
 
 ```python
 from uuid import UUID
@@ -780,7 +780,7 @@ git commit -m "feat: API routes for suppliers, PS directory, and catalog"
 
 - [ ] **Step 1: Write main.py**
 
-Write `vg-integration-hub/backend/main.py`:
+Write `api-hub/backend/main.py`:
 
 ```python
 from contextlib import asynccontextmanager
@@ -805,7 +805,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="VG Integration Hub", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="API-HUB", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -822,7 +822,7 @@ app.include_router(catalog_router)
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "vg-integration-hub"}
+    return {"status": "healthy", "service": "api-hub"}
 
 
 @app.get("/api/stats")
@@ -846,7 +846,7 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 
 Wait — that has a bug (duplicate route, bad workaround). Let me write it cleanly:
 
-Write `vg-integration-hub/backend/main.py`:
+Write `api-hub/backend/main.py`:
 
 ```python
 from contextlib import asynccontextmanager
@@ -871,7 +871,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="VG Integration Hub", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="API-HUB", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -888,7 +888,7 @@ app.include_router(catalog_router)
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "vg-integration-hub"}
+    return {"status": "healthy", "service": "api-hub"}
 
 
 @app.get("/api/stats")
@@ -902,7 +902,7 @@ async def get_stats(db: AsyncSession = Depends(get_db)):
 - [ ] **Step 2: Test backend starts**
 
 ```bash
-cd vg-integration-hub/backend
+cd api-hub/backend
 source .venv/bin/activate
 uvicorn main:app --reload --port 8000
 ```
@@ -911,7 +911,7 @@ uvicorn main:app --reload --port 8000
 
 ```bash
 curl -s http://localhost:8000/health
-# {"status":"healthy","service":"vg-integration-hub"}
+# {"status":"healthy","service":"api-hub"}
 
 curl -s http://localhost:8000/api/stats
 # {"suppliers":0,"products":0,"variants":0}
@@ -928,7 +928,7 @@ curl -s -X POST http://localhost:8000/api/suppliers \
 - [ ] **Step 4: Verify encryption in DB**
 
 ```bash
-docker exec vg-integration-hub-postgres-1 psql -U vg_user -d vg_hub \
+docker exec api-hub-postgres-1 psql -U vg_user -d vg_hub \
   -c "SELECT name, auth_config FROM suppliers;"
 # auth_config should be a Fernet blob (gAAAAA...), NOT plain JSON
 ```
@@ -949,7 +949,7 @@ git commit -m "feat: FastAPI app with all routes, CORS, auto table creation"
 
 - [ ] **Step 1: Write seed_demo.py**
 
-Write `vg-integration-hub/backend/seed_demo.py`:
+Write `api-hub/backend/seed_demo.py`:
 
 ```python
 import asyncio
@@ -1010,7 +1010,7 @@ if __name__ == "__main__":
 - [ ] **Step 2: Run seed**
 
 ```bash
-cd vg-integration-hub/backend
+cd api-hub/backend
 source .venv/bin/activate
 python seed_demo.py
 ```
@@ -1051,7 +1051,7 @@ git commit -m "feat: demo seed script with supplier, product, and 12 variants"
 - [ ] **Step 1: Scaffold Next.js**
 
 ```bash
-cd vg-integration-hub
+cd api-hub
 npx create-next-app@latest frontend --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --no-turbopack
 ```
 
@@ -1066,7 +1066,7 @@ npm install @fontsource/outfit @fontsource/fira-code
 
 - [ ] **Step 3: Write globals.css with Blueprint design tokens**
 
-Write `vg-integration-hub/frontend/src/app/globals.css`:
+Write `api-hub/frontend/src/app/globals.css`:
 
 ```css
 @import "@fontsource/outfit/400.css";
@@ -1109,7 +1109,7 @@ body {
 
 - [ ] **Step 4: Create API client**
 
-Write `vg-integration-hub/frontend/src/lib/api.ts`:
+Write `api-hub/frontend/src/lib/api.ts`:
 
 ```typescript
 const API = "http://localhost:8000";
@@ -1126,7 +1126,7 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
 
 - [ ] **Step 5: Create types**
 
-Write `vg-integration-hub/frontend/src/lib/types.ts`:
+Write `api-hub/frontend/src/lib/types.ts`:
 
 ```typescript
 export interface Supplier {
@@ -1215,7 +1215,7 @@ export interface Stats {
 
 - [ ] **Step 6: Write Blueprint layout with 10-item sidebar**
 
-Write `vg-integration-hub/frontend/src/app/layout.tsx`:
+Write `api-hub/frontend/src/app/layout.tsx`:
 
 ```tsx
 import type { Metadata } from "next";
@@ -1223,7 +1223,7 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VG Integration Hub",
+  title: "API-HUB",
   description: "Supplier catalog integration platform",
 };
 
@@ -1274,7 +1274,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="text-xs font-semibold uppercase tracking-widest"
                 style={{ color: "var(--blueprint)", fontFamily: "var(--font-mono)" }}
               >
-                VG Hub
+                API-HUB
               </div>
               <div className="text-xs mt-0.5" style={{ color: "var(--ink-muted)" }}>
                 Integration Platform
@@ -1322,7 +1322,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 - [ ] **Step 7: Write dashboard page**
 
-Write `vg-integration-hub/frontend/src/app/page.tsx`:
+Write `api-hub/frontend/src/app/page.tsx`:
 
 ```tsx
 "use client";
@@ -1435,7 +1435,7 @@ export default function Dashboard() {
 - [ ] **Step 8: Commit**
 
 ```bash
-cd vg-integration-hub
+cd api-hub
 git add frontend/src/lib/ frontend/src/app/layout.tsx frontend/src/app/globals.css frontend/src/app/page.tsx
 git commit -m "feat: Next.js Blueprint design system — Outfit/Fira Code, paper palette, dot-grid, 10-item nav"
 ```
@@ -1454,7 +1454,7 @@ Sections: 1 → Protocol, 2 → Select Supplier, 3 → Credentials, 4 → Test C
 
 - [ ] **Step 1: Write the progressive reveal form component**
 
-Write `vg-integration-hub/frontend/src/components/suppliers/reveal-form.tsx`:
+Write `api-hub/frontend/src/components/suppliers/reveal-form.tsx`:
 
 ```tsx
 "use client";
@@ -1703,7 +1703,7 @@ export default function RevealForm({ psCompanies, onSaved, onCancel }: Props) {
 
 - [ ] **Step 2: Write suppliers page**
 
-Write `vg-integration-hub/frontend/src/app/suppliers/page.tsx`:
+Write `api-hub/frontend/src/app/suppliers/page.tsx`:
 
 ```tsx
 "use client";
@@ -1829,7 +1829,7 @@ git commit -m "feat: suppliers page with 5-section progressive reveal form"
 
 - [ ] **Step 1: Write products page with supplier badges and click-through**
 
-Write `vg-integration-hub/frontend/src/app/products/page.tsx`:
+Write `api-hub/frontend/src/app/products/page.tsx`:
 
 ```tsx
 "use client";
@@ -2009,7 +2009,7 @@ Shows full product info: description, variant table (color × size with price + 
 
 - [ ] **Step 1: Write product detail page**
 
-Write `vg-integration-hub/frontend/src/app/products/[id]/page.tsx`:
+Write `api-hub/frontend/src/app/products/[id]/page.tsx`:
 
 ```tsx
 "use client";
@@ -2166,7 +2166,7 @@ Lists OnPrintShop storefronts. Each row shows name, OPS base URL, and push count
 
 - [ ] **Step 1: Write customers page**
 
-Write `vg-integration-hub/frontend/src/app/customers/page.tsx`:
+Write `api-hub/frontend/src/app/customers/page.tsx`:
 
 ```tsx
 "use client";
@@ -2315,7 +2315,7 @@ Shows the active n8n pipeline as animated nodes: PS Source → Normalize → OPS
 
 - [ ] **Step 1: Write pipeline view component**
 
-Write `vg-integration-hub/frontend/src/components/workflows/pipeline-view.tsx`:
+Write `api-hub/frontend/src/components/workflows/pipeline-view.tsx`:
 
 ```tsx
 "use client";
@@ -2408,7 +2408,7 @@ export default function PipelineView({ nodes }: Props) {
 
 - [ ] **Step 2: Write workflows page**
 
-Write `vg-integration-hub/frontend/src/app/workflows/page.tsx`:
+Write `api-hub/frontend/src/app/workflows/page.tsx`:
 
 ```tsx
 "use client";
@@ -2512,7 +2512,7 @@ Filterable history of all sync runs. Each row is expandable to show the full err
 
 - [ ] **Step 1: Write sync jobs page**
 
-Write `vg-integration-hub/frontend/src/app/sync/page.tsx`:
+Write `api-hub/frontend/src/app/sync/page.tsx`:
 
 ```tsx
 "use client";
@@ -2677,7 +2677,7 @@ Visual editor for mapping supplier-specific field names to the canonical schema.
 
 - [ ] **Step 1: Write field mapping page**
 
-Write `vg-integration-hub/frontend/src/app/mappings/[supplierId]/page.tsx`:
+Write `api-hub/frontend/src/app/mappings/[supplierId]/page.tsx`:
 
 ```tsx
 "use client";
@@ -2826,12 +2826,12 @@ git commit -m "feat: field mapping editor with JSON preview"
 
 Terminal 1:
 ```bash
-cd vg-integration-hub/backend && source .venv/bin/activate && uvicorn main:app --reload --port 8000
+cd api-hub/backend && source .venv/bin/activate && uvicorn main:app --reload --port 8000
 ```
 
 Terminal 2:
 ```bash
-cd vg-integration-hub/frontend && npm run dev
+cd api-hub/frontend && npm run dev
 ```
 
 PostgreSQL must be running: `docker compose up -d postgres`
@@ -2839,7 +2839,7 @@ PostgreSQL must be running: `docker compose up -d postgres`
 - [ ] **Step 2: Run demo seed**
 
 ```bash
-cd vg-integration-hub/backend && source .venv/bin/activate && python seed_demo.py
+cd api-hub/backend && source .venv/bin/activate && python seed_demo.py
 ```
 
 Expected: `Seeded: 1 supplier, 1 product, 12 variants`
@@ -2871,7 +2871,7 @@ Open `http://localhost:3000` and check every page:
 - [ ] **Step 5: Verify encryption in database**
 
 ```bash
-docker exec vg-integration-hub-postgres-1 psql -U vg_user -d vg_hub \
+docker exec api-hub-postgres-1 psql -U vg_user -d vg_hub \
   -c "SELECT name, auth_config FROM suppliers;"
 ```
 
@@ -2889,7 +2889,7 @@ curl -s http://localhost:8000/api/suppliers/{SUPPLIER_ID}/endpoints | python3 -m
 - [ ] **Step 7: Final commit**
 
 ```bash
-cd vg-integration-hub
+cd api-hub
 git add -A
 git commit -m "v0: proof of concept complete — PS directory to browser with encryption"
 ```
@@ -3006,7 +3006,7 @@ backend/
 
 - [ ] **Step 1: Write customers/models.py**
 
-Write `vg-integration-hub/backend/modules/customers/models.py`:
+Write `api-hub/backend/modules/customers/models.py`:
 
 ```python
 import uuid as uuid_mod
@@ -3036,7 +3036,7 @@ class Customer(Base):
 
 - [ ] **Step 2: Write customers/schemas.py**
 
-Write `vg-integration-hub/backend/modules/customers/schemas.py`:
+Write `api-hub/backend/modules/customers/schemas.py`:
 
 ```python
 from datetime import datetime
@@ -3067,7 +3067,7 @@ class CustomerRead(BaseModel):
 
 - [ ] **Step 3: Write customers/routes.py**
 
-Write `vg-integration-hub/backend/modules/customers/routes.py`:
+Write `api-hub/backend/modules/customers/routes.py`:
 
 ```python
 from uuid import UUID
@@ -3144,7 +3144,7 @@ git commit -m "feat: Customer model with encrypted OAuth2 credentials for OPS"
 
 - [ ] **Step 1: Write markup/models.py**
 
-Write `vg-integration-hub/backend/modules/markup/models.py`:
+Write `api-hub/backend/modules/markup/models.py`:
 
 ```python
 import uuid as uuid_mod
@@ -3177,7 +3177,7 @@ class MarkupRule(Base):
 
 - [ ] **Step 2: Write markup/schemas.py**
 
-Write `vg-integration-hub/backend/modules/markup/schemas.py`:
+Write `api-hub/backend/modules/markup/schemas.py`:
 
 ```python
 from datetime import datetime
@@ -3210,7 +3210,7 @@ class MarkupRuleRead(BaseModel):
 
 - [ ] **Step 3: Write markup/routes.py**
 
-Write `vg-integration-hub/backend/modules/markup/routes.py`:
+Write `api-hub/backend/modules/markup/routes.py`:
 
 ```python
 from uuid import UUID
@@ -3276,7 +3276,7 @@ git commit -m "feat: MarkupRule model and routes — per-customer pricing rules 
 
 - [ ] **Step 1: Write push_log/models.py**
 
-Write `vg-integration-hub/backend/modules/push_log/models.py`:
+Write `api-hub/backend/modules/push_log/models.py`:
 
 ```python
 import uuid as uuid_mod
@@ -3305,7 +3305,7 @@ class ProductPushLog(Base):
 
 - [ ] **Step 2: Write push_log/schemas.py**
 
-Write `vg-integration-hub/backend/modules/push_log/schemas.py`:
+Write `api-hub/backend/modules/push_log/schemas.py`:
 
 ```python
 from datetime import datetime
@@ -3344,7 +3344,7 @@ class ProductPushStatus(BaseModel):
 
 - [ ] **Step 3: Write push_log/routes.py**
 
-Write `vg-integration-hub/backend/modules/push_log/routes.py`:
+Write `api-hub/backend/modules/push_log/routes.py`:
 
 ```python
 from uuid import UUID
@@ -3404,7 +3404,7 @@ async def get_push_status(product_id: UUID, db: AsyncSession = Depends(get_db)):
 
 - [ ] **Step 4: Register new routers in main.py**
 
-In `vg-integration-hub/backend/main.py`, add:
+In `api-hub/backend/main.py`, add:
 
 ```python
 from modules.customers.routes import router as customers_router
@@ -3437,7 +3437,7 @@ This is the n8n workflow definition to import into your n8n instance. It impleme
 - [ ] **Step 1: Create n8n-workflows directory**
 
 ```bash
-mkdir -p vg-integration-hub/n8n-workflows
+mkdir -p api-hub/n8n-workflows
 ```
 
 - [ ] **Step 2: Import workflow into n8n**

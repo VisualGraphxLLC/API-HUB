@@ -84,11 +84,11 @@ VisualGraphx Integration Hub — pulls product catalogs from 994+ PromoStandards
 | 13 | Customers Page | TODO | `frontend/src/app/customers/page.tsx` |
 | 14 | Workflows Page (pipeline visualizer) | TODO | `frontend/src/app/workflows/page.tsx`, `components/workflows/pipeline-view.tsx` |
 | 15 | Sync Jobs Page | TODO | `frontend/src/app/sync/page.tsx` |
-| 16 | Field Mapping Page | TODO | `frontend/src/app/mappings/[supplierId]/page.tsx` |
+| 16 | Field Mapping Page | DONE | `frontend/src/app/mappings/[supplierId]/page.tsx` |
 | 17 | End-to-End Verification | TODO | No files — manual testing |
-| 18 | Customer Model (OAuth2) | TODO | `backend/modules/customers/models.py`, `schemas.py`, `__init__.py` |
-| 19 | Markup Rules | TODO | `backend/modules/markup/models.py`, `schemas.py`, `routes.py`, `__init__.py` |
-| 20 | Push Log | TODO | `backend/modules/push_log/models.py`, `schemas.py`, `routes.py`, `__init__.py` |
+| 18 | Customer Model (OAuth2) | DONE | `backend/modules/customers/models.py`, `schemas.py`, `__init__.py` |
+| 19 | Markup Rules | DONE | `backend/modules/markup/models.py`, `schemas.py`, `routes.py`, `__init__.py` |
+| 20 | Push Log | DONE | `backend/modules/push_log/models.py`, `schemas.py`, `routes.py`, `__init__.py` |
 | 21 | n8n OPS Push Workflow | TODO | `n8n-workflows/ops-push.json` |
 
 **Summary:** 6 tasks DONE, 1 PARTIAL, 14 TODO.

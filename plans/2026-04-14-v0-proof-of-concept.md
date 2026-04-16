@@ -85,7 +85,7 @@ VisualGraphx Integration Hub — pulls product catalogs from 994+ PromoStandards
 | 12 | Product Detail Page | ✅ DONE | PR #4 Sinchana | `frontend/src/app/products/[id]/page.tsx` |
 | 13 | Customers Page | ⬜ TODO | — | `frontend/src/app/customers/page.tsx` |
 | 14 | Workflows Page (pipeline visualizer) | ⬜ TODO | — | `frontend/src/app/workflows/page.tsx`, `components/workflows/pipeline-view.tsx` |
-| 15 | Sync Jobs Page | ✅ DONE | Vidhi | `frontend/src/app/sync/page.tsx` |
+| 15 | Sync Jobs Page | ✅ DONE | # PR 5urvashi| `frontend/src/app/sync/page.tsx` |
 | 16 | Field Mapping Page | ✅ DONE | Vidhi | `frontend/src/app/mappings/page.tsx` (supplier picker) + `mappings/[supplierId]/page.tsx` (editor + live JSON preview), `PUT /api/suppliers/{id}/mappings` backend endpoint |
 | 17 | End-to-End Verification | ⬜ TODO | — | No files — manual testing |
 | 18 | Customer Model (OAuth2) | ✅ DONE | PR #3 Vidhi | `backend/modules/customers/` — models, schemas, routes |
@@ -93,8 +93,6 @@ VisualGraphx Integration Hub — pulls product catalogs from 994+ PromoStandards
 | 20 | Push Log | ✅ DONE | PR #3 Vidhi | `backend/modules/push_log/` — models, schemas, routes |
 | 21 | n8n OPS Push Workflow | ⬜ TODO | — | `n8n-workflows/ops-push.json` |
 | 22 | API Registry | ✅ DONE | PR #6 Sinchana | `frontend/src/app/api-registry/page.tsx` |
-
-**Summary: 19 tasks DONE, 4 tasks TODO.** Backend complete. Frontend pages 10, 11, 12 (Sinchana), 15, 16 (Vidhi), 22 (Antigravity) done. Remaining: Task 13 (Customers page), 14 (Workflows page), 17 (E2E verification), 21 (n8n workflow).
 
 ---
 

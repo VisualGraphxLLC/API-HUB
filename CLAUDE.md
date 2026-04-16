@@ -31,19 +31,26 @@ cd frontend && npm run build                  # production build
 cd frontend && npm run lint                   # ESLint
 ```
 
-### Full stack
+### Full stack (Docker)
 ```bash
-docker compose up -d                          # postgres + api
+docker compose up -d                          # postgres + n8n (with OPS node)
+```
+
+### n8n
+```bash
+docker compose up -d n8n                      # n8n editor on :5678
+# OnPrintShop custom node auto-installed from ./n8n-nodes-onprintshop/
 ```
 
 ## Architecture
 
 **Modular monolith** — NOT microservices. All backend modules live in one FastAPI app. Suppliers are database configuration (protocol adapter pattern), not per-supplier code. Adding a supplier = creating a DB row, not writing code.
 
-**Three systems:**
-- `backend/` — FastAPI (Python 3.12). All routes under `/api/`. Async SQLAlchemy + asyncpg.
-- `frontend/` — Next.js 14/15 (App Router). Blueprint design system (Outfit + Fira Code fonts, paper palette #f2f0ed, blueprint blue #1e4d92, dot-grid). Uses shadcn/ui + Tailwind.
-- n8n (external) — owns all external API calls (PromoStandards SOAP, OPS GraphQL). FastAPI stores data and serves rules.
+**Four systems:**
+- `backend/` — FastAPI (Python 3.12). All routes under `/api/`. Async SQLAlchemy + asyncpg. Handles SOAP/REST fetch, normalization, storage, markup rules.
+- `frontend/` — Next.js 15 (App Router). Blueprint design system (Outfit + Fira Code fonts, paper palette #f2f0ed, blueprint blue #1e4d92, dot-grid). Uses shadcn/ui + Tailwind.
+- n8n (Docker, port 5678) — orchestrates sync schedules via HTTP triggers to FastAPI. Owns all OPS push calls via the OnPrintShop custom node.
+- `n8n-nodes-onprintshop/` — TypeScript custom n8n node for OnPrintShop GraphQL API. OAuth2 auth. 22 operations implemented, 33 mutations missing (see `OPS-NODE-GAP-ANALYSIS.md`).
 
 **Backend module pattern:** Each module in `backend/modules/` has `models.py`, `schemas.py`, `routes.py`, `__init__.py`. Some have `service.py`. Modules: `suppliers`, `catalog`, `customers`, `markup`, `push_log`, `ps_directory`, `sync_jobs`.
 
@@ -73,8 +80,19 @@ SECRET_KEY=<fernet-key>
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 ```
 
+- **n8n owns OPS push.** FastAPI prepares data + applies markup. n8n calls OPS via the OnPrintShop node.
+
 ## Plan & Progress
 
-Master plan: `plans/2026-04-14-v0-proof-of-concept.md` — 21 tasks with dependency map, task status, and phase-based execution order. Check the Task Status table at the top for current progress.
+- **V0 plan:** `plans/2026-04-14-v0-proof-of-concept.md` — 21 tasks, 19 done. Backend complete. Remaining: Customers page, Workflows page, E2E verification.
+- **V1 plan:** `plans/2026-04-16-v1-integration-pipeline.md` — 6 phases, 23 tasks:
+  - V0 Cleanup (3 critical bug fixes + 2 frontend pages)
+  - V1a: SanMar SOAP inbound (fetch → normalize → store)
+  - V1b: S&S Activewear + Alphabroder
+  - V1c: OPS Push (n8n node mutations + markup engine + push workflow)
+  - V1d: 4Over (REST + HMAC)
+  - V1e: Scheduled sync + inventory + dashboard
+  - V1f: Frontend UX overhaul (simplified supplier form, OPS product config, terminology)
+- **Code review:** `docs/code_review_all_tasks.md` — 3 critical, 3 moderate, 3 minor issues
 
-Current Status (April 15, 2026): V0 proof of concept is underway. Backend API modules are mostly complete. Frontend pages (`/suppliers`, `/products`, `/customers`, `/markup`) have been scaffolded and are iterating towards functional completeness.
+Current Status (April 16, 2026): V0 is 19/21 done. n8n running in Docker with OnPrintShop node loaded. V1 pipeline plan approved. Waiting on Christian for SanMar API credentials and OPS Postman collection export.

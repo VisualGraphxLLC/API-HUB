@@ -82,9 +82,31 @@ export interface Customer {
   id: string;
   name: string;
   ops_base_url: string;
-  ops_api_key: string;
+  ops_token_url: string;
+  ops_client_id: string;
   is_active: boolean;
   created_at: string;
+}
+
+/* ─── Markup Rules ───────────────────────────────────────────────────────── */
+export interface MarkupRule {
+  id: string;
+  customer_id: string;
+  scope: string;
+  markup_pct: number;
+  min_margin: number | null;
+  rounding: string;
+  priority: number;
+  created_at: string;
+}
+
+export interface MarkupRuleCreate {
+  customer_id: string;
+  scope: string;
+  markup_pct: number;
+  min_margin?: number | null;
+  rounding: string;
+  priority: number;
 }
 
 /* ─── Sync Jobs ──────────────────────────────────────────────────────────── */

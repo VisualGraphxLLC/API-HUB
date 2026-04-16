@@ -43,6 +43,7 @@
 | **V1c** | OPS Push — n8n node product mutations + markup engine + push workflow | V1a (products in DB) | OPS Postman collection for exact mutation input fields |
 | **V1d** | 4Over (REST + HMAC) + field mapping | V1a | 4Over API creds |
 | **V1e** | Scheduled sync + inventory + monitoring dashboard | V1a-V1d | n8n deployed |
+| **V1f** | Frontend UX overhaul — simplified supplier setup, OPS product config, terminology, help text | V0 Cleanup (shadcn) | OPS creds for product config page |
 
 ---
 
@@ -59,8 +60,18 @@
                     │      │                Task 0.6
                     └──────┼──────────────────┘
                            │
-                           ▼
-    ┌─────────── V1a: SanMar SOAP Inbound ──────────────┐
+              ┌────────────┼────────────────────────────┐
+              │            │                             │
+              ▼            ▼                             ▼
+    V1f: Frontend UX     V1a: SanMar SOAP        V1f Task 23:
+    Tasks 20-22          Inbound                  OPS Product
+    (terminology,        (SOAP client,            Config page
+     supplier form,       normalizer,             (BLOCKED on
+     dashboard)           sync endpoints)          OPS creds)
+    NO BLOCKERS          │
+              │          │
+              ▼          ▼
+    ┌─────────── V1a continued ─────────────────────────┐
     │         ┌────┬────┐                                │
     │     Task 1  Task 2  Task 3     (parallel)          │
     │     Schema  PS      WSDL +                         │
@@ -587,12 +598,168 @@ The `POST /api/sync/{supplier_id}/products` endpoint now handles 3 protocols:
 
 ---
 
+## V1f — Frontend UX Overhaul
+
+> **Parallel with V1a.** Tasks 20-22 have NO backend dependency and can start immediately after V0 Cleanup. Task 23 (OPS Product Config) needs OPS API credentials. This is intern-friendly work — assign to Sinchana, Urvashi, Vidhi.
+
+**Goal:** Make the UI user-friendly for non-technical users. Remove all jargon, simplify the supplier setup from 5 steps to 3, add help text everywhere, and create a new OPS Product Configuration page.
+
+### Task 20: Terminology + Loading States + Sidebar Rename
+**Modify:** All frontend pages + `layout.tsx` / `Sidebar.tsx`
+**Can parallel with:** Tasks 21, 22, and ALL of V1a
+**No backend changes.**
+**Description:** Global find-and-replace of technical jargon with business language. This is the single highest-impact UX change — every page becomes less intimidating.
+
+**Terminology map:**
+
+| Current (Technical) | New (Business) | Files |
+|---------------------|----------------|-------|
+| "Vendors" | "Suppliers" | `page.tsx` (dashboard) |
+| "Technical Index" | "Product Catalog" | `products/page.tsx` |
+| "Customers" | "Storefronts" | `customers/page.tsx`, sidebar |
+| "Push to OPS" | "Publish to Store" | `products/[id]/page.tsx` |
+| "Sync Jobs" | "Data Updates" | `sync/page.tsx`, sidebar |
+| "Markup Rules" | "Pricing Rules" | `markup/page.tsx`, sidebar |
+| "Field Mappings" | "Data Configuration" | `mappings/page.tsx`, sidebar |
+| "_QUERYING_INDEX..." | "Loading products..." | all pages |
+| "_QUERYING_ENDPOINT_REGISTRY..." | "Connecting..." | all pages |
+| "_FETCHING_METRICS..." | "Loading dashboard..." | dashboard |
+| "Auth_Error" | "Connection Failed" | all status badges |
+| "delta" | "Recent Changes" | sync page |
+| "full_sync" | "Full Refresh" | sync page |
+| "SOAP / WSDL" | Hidden entirely | supplier form |
+
+**Sidebar sections:**
+- "Orchestration" → "Products"
+- "Management" → "Configuration"
+- "Catalog" → "Product Catalog"
+- "Customers" → "Storefronts"
+- "Markup Rules" → "Pricing Rules"
+- "Sync Jobs" → "Data Updates"
+- "Field Mapping" → "Data Configuration"
+- Remove duplicate "Add Supplier" from Actions section
+- Add "Product Setup" link (for Task 23 OPS config page)
+
+**Empty states for every page:**
+- Products: "No products yet. Connect a supplier to start syncing products."
+- Storefronts: "No storefronts added. Add your OnPrintShop storefront to start publishing."
+- Data Updates: "No sync history yet. Activate a supplier to see updates here."
+- Pricing Rules: "No pricing rules set. Add a rule to control storefront pricing."
+
+### Task 21: Simplified Add Supplier Form
+**Modify:** `frontend/src/components/suppliers/reveal-form.tsx`, `frontend/src/app/suppliers/page.tsx`
+**Can parallel with:** Tasks 20, 22, and ALL of V1a
+**No backend changes.**
+**Description:** Rewrite the 5-step progressive reveal form into a clean 3-step flow with zero jargon.
+
+**Current flow (too complex):**
+1. Choose protocol (PromoStandards / REST / HMAC) — jargon
+2. Select supplier OR enter custom name + URL — confusing dual mode
+3. Enter credentials ("Account ID / Username" + "Password") — vague labels
+4. Test connection — shows "11 active services" (meaningless)
+5. Set sync schedule (4 separate dropdowns) — technical
+
+**New flow (3 steps):**
+
+**Step 1: "Choose your supplier"**
+- Search bar: "Search 994+ suppliers..."
+- Grid of popular suppliers with logos: SanMar, S&S Activewear, Alphabroder, 4Over
+- "Can't find yours? Add a custom supplier" link at bottom
+- No protocol selection — auto-detected from PS directory or inferred from URL
+- Custom path: just Name + API URL (label: "Your supplier's API address")
+
+**Step 2: "Connect your account"**
+- Labels: "API Username" and "API Password" (clear, simple)
+- Help text: "Your supplier provides these when you sign up for API access. Contact [SanMar] support if you don't have them."
+- "Test Connection" button
+- Success: "Connected to SanMar — 994 products available" (one line, no service listing)
+- Failure: "Could not connect. Please check your username and password." + "Try Again" button
+
+**Step 3: "Activate"**
+- Summary card showing: supplier name, connection status, product count
+- Single dropdown: "How often should we check for updates?" — "Recommended (automatic)" / "Every 30 minutes" / "Every hour" / "Once a day"
+- Smart defaults behind the scenes (inventory=30min, pricing=daily, products=daily delta, images=weekly)
+- "Activate Supplier" button → success state → redirect to suppliers list
+
+### Task 22: Dashboard Wired to Real API + Business Language
+**Modify:** `frontend/src/app/page.tsx`
+**Can parallel with:** Tasks 20, 21, and ALL of V1a
+**No backend changes** (endpoints already exist).
+**Description:** Replace hardcoded demo data with real API calls. Rename all technical labels.
+
+**Changes:**
+- Stat cards: `api<Stats>("/api/stats")` → shows real supplier/product/variant counts
+- Recent activity table: `api("/api/sync-jobs?limit=5")` → shows real sync history
+- Rename "Recent Pipeline Activity" → "Recent Data Updates"
+- Rename operation names: "inventory_sync_v2" → "Inventory Update", "delta_product_ingest" → "Product Sync", "push_to_ops" → "Published to Store"
+- Remove hardcoded baselines (32.4k SKUs, 187k variants, 98% uptime)
+
+### Task 23: OPS Product Configuration Page
+**Create:** `frontend/src/app/products/configure/page.tsx` + components
+**Create:** `backend/modules/ops_config/` — new backend module
+**Depends on:** OPS API credentials (Client ID + Secret)
+**Description:** New page showing all OPS product options. Users configure how products appear in OPS storefronts BEFORE publishing. Three sections:
+
+**Section A: Product Categories**
+- Fetches OPS categories via API (getCategories)
+- Assign categories to synced products: "Which category should SanMar T-Shirts go into?"
+- Auto-suggest based on supplier product types
+
+**Section B: Product Options & Attributes**
+- Shows OPS master options: Color, Size, Material, Paper Type, Coating, etc.
+- Visual mapping editor: "SanMar 'Navy' → OPS Color 'Navy Blue'"
+- Option rules: "If Paper = Glossy, then available Coatings: Matte, UV, Lamination"
+- Status per product: Configured / Needs Mapping / Not Applicable
+
+**Section C: Pricing Preview**
+- Base price from supplier → markup applied → final storefront price
+- Live preview: "SanMar PC61 base $3.99 → 45% markup → $5.79 → rounded to $5.99"
+- Option-level pricing: "Add $2.00 for XL", "Add $1.50 for premium colors"
+- Links to Pricing Rules page for rule management
+
+**Data flow:**
+```
+OPS API (via backend proxy)     Frontend
+┌─────────────────────┐       ┌────────────────────────┐
+│ getCategories       │──────▶│ Category assignment     │
+│ getMasterOptions    │──────▶│ Options mapping         │
+│ getOptionPrices     │──────▶│ Pricing preview         │
+│ getProductDetailed  │──────▶│ Product config status   │
+└─────────────────────┘       └────────────────────────┘
+                                        │
+                              User configures mappings
+                                        │
+                              Saved to DB → n8n reads
+                              when pushing to OPS
+```
+
+**Backend endpoints needed:**
+- `GET /api/ops/{customer_id}/categories` — proxy/cache OPS categories
+- `GET /api/ops/{customer_id}/master-options` — proxy/cache OPS options
+- `POST /api/ops-config/{customer_id}/product/{product_id}` — save product config
+
+**Files to create:**
+- `frontend/src/app/products/configure/page.tsx`
+- `frontend/src/components/products/category-assign.tsx`
+- `frontend/src/components/products/options-mapping.tsx`
+- `frontend/src/components/products/pricing-preview.tsx`
+- `backend/modules/ops_config/__init__.py`
+- `backend/modules/ops_config/routes.py`
+- `backend/modules/ops_config/models.py`
+- `backend/modules/ops_config/schemas.py`
+
+---
+
 ## Team Assignment
 
 | Phase | Tasks | Suggested Owner | Rationale |
 |-------|-------|----------------|-----------|
 | V0 Cleanup (0.1-0.3) | Bug fixes + shadcn | Any dev | Quick fixes |
 | V0 Cleanup (0.4-0.6) | Frontend pages | Sinchana / Urvashi | Frontend work |
+| **V1f Task 20** | **Terminology + sidebar rename** | **Sinchana** | **She built the layout/sidebar** |
+| **V1f Task 21** | **Simplified supplier form** | **Sinchana** | **She built the original reveal-form** |
+| **V1f Task 22** | **Dashboard real API** | **Urvashi** | **Quick frontend wire-up** |
+| **V1f Task 23** | **OPS Product Config page** | **Vidhi + Tanishq** | **New backend module + complex UI** |
 | V1a Tasks 1-2 | Schema + PS schemas | Intern | Model changes |
 | V1a Tasks 3-5 | SOAP client + normalizer + routes | Tanishq / Senior | Core pipeline |
 | V1b Task 7 | Alphabroder | Anyone | Just a DB row |
@@ -601,6 +768,8 @@ The `POST /api/sync/{supplier_id}/products` endpoint now handles 3 protocols:
 | V1c Tasks 11-13 | Markup engine + push workflow + images | Tanishq / Senior | Core business logic |
 | V1d Tasks 14-16 | 4Over adapter | Vidhi | She built field mapping UI |
 | V1e Tasks 17-19 | n8n workflows + dashboard | Any dev | n8n JSON + minor frontend |
+
+**Key insight:** V1f Tasks 20-22 run in parallel with V1a. Interns do frontend UX while Tanishq builds the SOAP pipeline. No one blocks anyone.
 
 ---
 
@@ -611,10 +780,11 @@ The `POST /api/sync/{supplier_id}/products` endpoint now handles 3 protocols:
 | SanMar API credentials | V1a Task 6 E2E test | Christian → Tanishq | Waiting |
 | S&S API credentials | V1b Task 8 | Christian → Tanishq | Waiting |
 | 4Over API credentials | V1d Task 14 | Christian → Tanishq | Waiting |
-| **OPS Postman collection export** | **V1c Task 10 — exact mutation input fields** | **Tanishq (export from browser)** | **Waiting** |
+| **OPS Postman collection export** | **V1c Task 10 + V1f Task 23** | **Tanishq (export from browser)** | **Waiting** |
 | n8n-nodes-onprintshop P0 fixes | V1c Task 9 | Tanishq | Not started |
 | OPS custom dev requests | V1c if OPS needs new endpoints | Christian | Waiting |
-| shadcn/ui installation | All remaining frontend | Sinchana | Not started |
+| OPS API credentials (Client ID + Secret) | V1f Task 23 (OPS product config page) | Christian → Tanishq | Waiting |
+| shadcn/ui installation | All remaining frontend + V1f | Sinchana | Not started |
 
 ---
 
@@ -634,6 +804,13 @@ The `POST /api/sync/{supplier_id}/products` endpoint now handles 3 protocols:
 **V1d:** Configure 4Over field mapping in UI → sync → 4Over products in catalog
 
 **V1e:** n8n cron workflows running → inventory every 30 min → delta sync daily → dashboard shows real-time health
+
+**V1f:** Walk through every page as a non-technical user:
+- Zero instances of SOAP, WSDL, HMAC, delta, OPS, or _QUERYING visible
+- Add SanMar in 3 clicks (search → credentials → activate)
+- Dashboard shows real stats, not hardcoded demo data
+- Every page has helpful empty state with next action
+- OPS product config page shows categories, options, pricing preview from real OPS API
 
 ---
 

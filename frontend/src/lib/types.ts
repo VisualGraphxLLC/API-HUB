@@ -82,9 +82,12 @@ export interface Customer {
   id: string;
   name: string;
   ops_base_url: string;
-  ops_api_key: string;
+  ops_token_url: string;
+  ops_client_id: string;
   is_active: boolean;
   created_at: string;
+  products_pushed: number;
+  markup_rules_count: number;
 }
 
 /* ─── Sync Jobs ──────────────────────────────────────────────────────────── */

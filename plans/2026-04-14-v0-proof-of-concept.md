@@ -67,7 +67,7 @@ VisualGraphx Integration Hub — pulls product catalogs from 994+ PromoStandards
 
 ## Task Status
 
-> Last updated: 2026-04-16. Reflects merged PRs #1 (Urvashi), #2 (Sinchana), #3 (Vidhi) + Vidhi Tasks 13, 15, 16 frontend completed.
+> Last updated: 2026-04-16. Reflects merged PRs #1 (Urvashi), #2 (Sinchana), #3 (Vidhi) + Vidhi Tasks 15, 16 frontend completed.
 
 | Task | Description | Status | Done By | Files |
 |------|-------------|--------|---------|-------|

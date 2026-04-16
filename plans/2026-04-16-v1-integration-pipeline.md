@@ -43,7 +43,10 @@
 | **V1c** | OPS Push — n8n node product mutations + markup engine + push workflow | V1a (products in DB) | OPS Postman collection for exact mutation input fields |
 | **V1d** | 4Over (REST + HMAC) + field mapping | V1a | 4Over API creds |
 | **V1e** | Scheduled sync + inventory + monitoring dashboard | V1a-V1d | n8n deployed |
-| **V1f** | Frontend UX overhaul — simplified supplier setup, OPS product config, terminology, help text | V0 Cleanup (shadcn) | OPS creds for product config page |
+| **V1f** | Frontend UX polish — terminology, simplified supplier form, dashboard API wiring | V0 Cleanup (shadcn) | None |
+| **V1g** | Storefront Configuration — OPS category/option/pricing setup UI + backend proxy | V1c (OPS push working) | OPS API creds + OPS Postman collection |
+
+> **Scope change (2026-04-16):** Task 23 (OPS Product Config) was extracted from V1f into its own phase V1g. It is NOT a UX polish task — it's a major new feature requiring a backend module to proxy the OPS API, handle auth token refreshes, cache nested JSON, and manage rate limits. It is hard-blocked on OPS API credentials and should only start after V1c proves the OPS push pipeline works.
 
 ---
 
@@ -60,72 +63,37 @@
                     │      │                Task 0.6
                     └──────┼──────────────────┘
                            │
-              ┌────────────┼────────────────────────────┐
-              │            │                             │
-              ▼            ▼                             ▼
-    V1f: Frontend UX     V1a: SanMar SOAP        V1f Task 23:
-    Tasks 20-22          Inbound                  OPS Product
-    (terminology,        (SOAP client,            Config page
-     supplier form,       normalizer,             (BLOCKED on
-     dashboard)           sync endpoints)          OPS creds)
-    NO BLOCKERS          │
-              │          │
-              ▼          ▼
-    ┌─────────── V1a continued ─────────────────────────┐
-    │         ┌────┬────┐                                │
-    │     Task 1  Task 2  Task 3     (parallel)          │
-    │     Schema  PS      WSDL +                         │
-    │     Updates Schemas SOAP Client                    │
-    │         └────┴──┬───┘                              │
-    │                 ▼                                  │
-    │            Task 4: Normalizer                      │
-    │                 │                                  │
-    │                 ▼                                  │
-    │            Task 5: Sync Endpoints                  │
-    │                 │                                  │
-    │                 ▼                                  │
-    │            Task 6: E2E Verify (BLOCKED: creds)     │
-    └────────────────┬───────────────────────────────────┘
-                     │
-        ┌────────────┼────────────┐
-        │            │            │
-        ▼            ▼            ▼
-   V1b: S&S +    V1c: OPS     V1d: 4Over
-   Alphabroder   Push          + Field Map
-   ┌─────────┐  ┌──────────┐  ┌──────────┐
-   │ Task 7  │  │ Task 9   │  │ Task 14  │
-   │ Alpha   │  │ Fix P0   │  │ HMAC     │
-   │ (0 code)│  │ contracts│  │ client   │
-   │         │  │          │  │          │
-   │ Task 8  │  │ Task 10  │  │ Task 15  │
-   │ S&S REST│  │ Add 11   │  │ 4Over    │
-   │ adapter │  │ product  │  │ normaliz.│
-   └─────────┘  │ mutations│  │          │
-                │          │  │ Task 16  │
-   ALL THREE    │ Task 11  │  │ Sync     │
-   PHASES RUN   │ Markup   │  │ route    │
-   IN PARALLEL  │ engine   │  └──────────┘
-                │          │
-                │ Task 12  │
-                │ n8n push │
-                │ workflow  │
-                │          │
-                │ Task 13  │
-                │ Image    │
-                │ pipeline │
-                └──────────┘
-                     │
-        ┌────────────┴────────────┐
-        │                         │
-        ▼                         ▼
-   V1e: Scheduled Sync      V1e: Dashboard
-   ┌──────────────────┐    ┌──────────────┐
-   │ Task 17: n8n     │    │ Task 19:     │
-   │ cron workflows   │    │ Sync health  │
-   │                  │    │ dashboard    │
-   │ Task 18: Delta   │    └──────────────┘
-   │ sync support     │
-   └──────────────────┘
+              ┌────────────┼──────────────────┐
+              │            │                   │
+              ▼            ▼                   │
+    V1f: UX Polish       V1a: SanMar SOAP     │
+    Tasks 20-22          Tasks 1-6             │
+    (terminology,        (SOAP client,         │
+     supplier form,       normalizer,          │
+     dashboard)           sync endpoints)      │
+    NO BLOCKERS            │                   │
+                           │                   │
+              ┌────────────┼────────────┐      │
+              │            │            │      │
+              ▼            ▼            ▼      │
+         V1b: S&S +    V1c: OPS     V1d: 4Over│
+         Alphabroder   Push          + Mapping │
+         Tasks 7-8     Tasks 9-13   Tasks 14-16
+         (parallel)    (sequential)  (sequential)
+              │            │            │
+              └────────────┼────────────┘
+                           │
+                           ▼
+                    V1e: Scheduled Sync
+                    Tasks 17-19
+                           │
+                           ▼
+                    V1g: Storefront Config
+                    Task 23
+                    (OPS category/option/pricing
+                     setup UI + backend proxy)
+                    BLOCKED: OPS API creds
+                    + requires V1c working first
 ```
 
 ---
@@ -159,6 +127,10 @@
 | **17** n8n cron workflows | V1a-V1d all done | 18, 19 | — |
 | **18** Delta sync | 5 | **17, 19** | — |
 | **19** Sync dashboard | V1a done | **17, 18** | — |
+| **20** Terminology + sidebar | V0 done (shadcn) | **21, 22**, all V1a | — |
+| **21** Simplified supplier form | V0 done (shadcn) | **20, 22**, all V1a | — |
+| **22** Dashboard real API | V0 done (shadcn) | **20, 21**, all V1a | — |
+| **23** OPS Storefront Config | V1c done + OPS creds | — | — |
 
 ---
 
@@ -169,9 +141,10 @@
 | Phase | Parallel Tracks | Max Agents | Tasks |
 |-------|----------------|------------|-------|
 | V0 Cleanup | 2 tracks: backend fixes + frontend pages | 3 | 0.1+0.2 together, then 0.4+0.5+0.6 together (after 0.3) |
-| V1a | Tasks 1, 2, 3 parallel → then 4 → 5 → 6 sequential | 3 → 1 | Schema + PS schemas + SOAP client can build simultaneously |
+| V1a + V1f | Tasks 1,2,3 parallel (backend) + Tasks 20,21,22 parallel (frontend) | **6** | Backend SOAP pipeline + frontend UX polish simultaneously |
 | V1b + V1c + V1d | **All 3 phases run in parallel** | 5 | V1b (2 tasks), V1c (5 tasks sequential), V1d (3 tasks sequential) |
 | V1e | Tasks 17+18+19 parallel | 3 | All independent once suppliers are syncing |
+| V1g | Task 23 alone | 1 | Blocked until V1c proves OPS push works |
 
 ### Optimal agent dispatch:
 
@@ -179,9 +152,10 @@
 - Agent A: Tasks 0.1, 0.2 (backend fixes)
 - Agent B: Task 0.3 (shadcn), then 0.4+0.5+0.6 (frontend)
 
-**Sprint 2 (V1a):** 3 agents → 1 agent
-- Agents A+B+C in parallel: Task 1 (schema), Task 2 (PS schemas), Task 3 (SOAP client)
-- After all 3 done → Agent A: Task 4 (normalizer) → Task 5 (routes) → Task 6 (verify)
+**Sprint 2 (V1a + V1f in parallel):** up to 6 agents
+- Agents A+B+C (backend): Task 1 (schema), Task 2 (PS schemas), Task 3 (SOAP client)
+- Agents D+E+F (frontend): Task 20 (terminology), Task 21 (supplier form), Task 22 (dashboard)
+- After backend 1-3 done → Agent A: Task 4 → Task 5 → Task 6
 
 **Sprint 3 (V1b + V1c + V1d):** 3 agents, all parallel
 - Agent A — V1b: Task 7 (Alphabroder, 10 min), Task 8 (S&S adapter)
@@ -665,8 +639,14 @@ The `POST /api/sync/{supplier_id}/products` endpoint now handles 3 protocols:
 - Search bar: "Search 994+ suppliers..."
 - Grid of popular suppliers with logos: SanMar, S&S Activewear, Alphabroder, 4Over
 - "Can't find yours? Add a custom supplier" link at bottom
-- No protocol selection — auto-detected from PS directory or inferred from URL
-- Custom path: just Name + API URL (label: "Your supplier's API address")
+- **PromoStandards path:** Protocol auto-detected from PS directory — user just picks a name, system knows it's SOAP
+- **Custom supplier path:** Name + API URL + simplified API type dropdown:
+  - "Standard API" (maps to `rest` protocol — for S&S-style REST APIs)
+  - "Secure API (signed requests)" (maps to `rest_hmac` — for 4Over-style HMAC APIs)
+  - No mention of SOAP/WSDL/HMAC — just business-friendly labels
+  - Help text: "Not sure? Choose 'Standard API' — your supplier's documentation will tell you if signed requests are needed."
+
+> **Design note:** Auto-detecting REST vs REST+HMAC is impossible without user input — HMAC signing is an auth mechanism, not something visible from a URL. The dropdown is the minimum viable input to route to the correct protocol adapter.
 
 **Step 2: "Connect your account"**
 - Labels: "API Username" and "API Password" (clear, simple)
@@ -694,11 +674,18 @@ The `POST /api/sync/{supplier_id}/products` endpoint now handles 3 protocols:
 - Rename operation names: "inventory_sync_v2" → "Inventory Update", "delta_product_ingest" → "Product Sync", "push_to_ops" → "Published to Store"
 - Remove hardcoded baselines (32.4k SKUs, 187k variants, 98% uptime)
 
-### Task 23: OPS Product Configuration Page
+---
+
+## V1g — Storefront Configuration (extracted from V1f)
+
+> **WARNING: This is a major new feature, NOT a UX polish task.** It was originally Task 23 inside V1f but was extracted into its own phase because it requires: (1) a new backend module to proxy the OPS API, (2) handling OPS OAuth2 token refresh, rate limits, and caching of complex nested JSON, (3) OPS API credentials, and (4) V1c to be working (OPS push pipeline must be proven before building a config UI on top of it).
+
+### Task 23: OPS Storefront Product Configuration Page
 **Create:** `frontend/src/app/products/configure/page.tsx` + components
 **Create:** `backend/modules/ops_config/` — new backend module
-**Depends on:** OPS API credentials (Client ID + Secret)
-**Description:** New page showing all OPS product options. Users configure how products appear in OPS storefronts BEFORE publishing. Three sections:
+**Depends on:** V1c (OPS push working) + OPS API credentials (Client ID + Secret) + OPS Postman collection for response shapes
+**Cannot start until:** V1c Tasks 9-13 are complete and at least one product has been successfully pushed to OPS
+**Description:** New page showing all OPS product options available via the API. Users configure how products appear in OPS storefronts BEFORE publishing. Three sections:
 
 **Section A: Product Categories**
 - Fetches OPS categories via API (getCategories)
@@ -759,7 +746,7 @@ OPS API (via backend proxy)     Frontend
 | **V1f Task 20** | **Terminology + sidebar rename** | **Sinchana** | **She built the layout/sidebar** |
 | **V1f Task 21** | **Simplified supplier form** | **Sinchana** | **She built the original reveal-form** |
 | **V1f Task 22** | **Dashboard real API** | **Urvashi** | **Quick frontend wire-up** |
-| **V1f Task 23** | **OPS Product Config page** | **Vidhi + Tanishq** | **New backend module + complex UI** |
+| **V1g Task 23** | **OPS Storefront Config page** | **Tanishq + Vidhi** | **New backend module + OPS API proxy — senior work, not intern-assignable** |
 | V1a Tasks 1-2 | Schema + PS schemas | Intern | Model changes |
 | V1a Tasks 3-5 | SOAP client + normalizer + routes | Tanishq / Senior | Core pipeline |
 | V1b Task 7 | Alphabroder | Anyone | Just a DB row |
@@ -780,10 +767,10 @@ OPS API (via backend proxy)     Frontend
 | SanMar API credentials | V1a Task 6 E2E test | Christian → Tanishq | Waiting |
 | S&S API credentials | V1b Task 8 | Christian → Tanishq | Waiting |
 | 4Over API credentials | V1d Task 14 | Christian → Tanishq | Waiting |
-| **OPS Postman collection export** | **V1c Task 10 + V1f Task 23** | **Tanishq (export from browser)** | **Waiting** |
+| **OPS Postman collection export** | **V1c Task 10 + V1g Task 23** | **Tanishq (export from browser)** | **Waiting** |
 | n8n-nodes-onprintshop P0 fixes | V1c Task 9 | Tanishq | Not started |
 | OPS custom dev requests | V1c if OPS needs new endpoints | Christian | Waiting |
-| OPS API credentials (Client ID + Secret) | V1f Task 23 (OPS product config page) | Christian → Tanishq | Waiting |
+| OPS API credentials (Client ID + Secret) | V1g Task 23 (storefront config) | Christian → Tanishq | Waiting |
 | shadcn/ui installation | All remaining frontend + V1f | Sinchana | Not started |
 
 ---
@@ -808,8 +795,11 @@ OPS API (via backend proxy)     Frontend
 **V1f:** Walk through every page as a non-technical user:
 - Zero instances of SOAP, WSDL, HMAC, delta, OPS, or _QUERYING visible
 - Add SanMar in 3 clicks (search → credentials → activate)
+- Custom supplier form shows simplified API type dropdown (Standard API / Secure API) instead of protocol jargon
 - Dashboard shows real stats, not hardcoded demo data
 - Every page has helpful empty state with next action
+
+**V1g:** Open storefront config page → see OPS categories, master options, pricing preview from real OPS API. Configure a product's category + option mappings. Verify config is saved and used by the push workflow.
 - OPS product config page shows categories, options, pricing preview from real OPS API
 
 ---

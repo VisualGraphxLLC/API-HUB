@@ -1,160 +1,34 @@
 # Vidhi — Sprint Tasks
 
-**Total: 3 tasks** | Branch: `vidhi-sprint-v1`
+**Status:** 2/3 V0 tasks shipped. Task 3 (resolver) still pending. Three new V1c/V1d tasks added below.
+**Branch:** `vidhi-sprint-v1` (mostly merged) → start `vidhi-sprint-v2` after Task 3
 
 ---
 
-## Task 0.4: Customers Page (Storefronts)
+## ✅ Completed
 
-**Priority:** Start immediately (after Sinchana's Task 0.3 shadcn install is merged)
-**File:** `frontend/src/app/customers/page.tsx`
-**Backend API:** `GET /api/customers`, `POST /api/customers`, `DELETE /api/customers/{id}` — all already exist
-
-### What this page shows
-
-A list of OnPrintShop storefronts. Each row: name, OPS base URL, active status. An "Add Storefront" button opens an inline form with OAuth2 credential fields.
-
-**Note:** In the V1f UX overhaul (Task 20), "Customers" will be renamed to "Storefronts" in the sidebar. For now, build the page at `/customers` — the rename happens separately.
-
-### Steps
-
-- [ ] **Step 1:** Create `frontend/src/app/customers/page.tsx` with:
-
-**Table columns:**
-- Store Name
-- OPS URL (show just the hostname, e.g., "acme.onprintshop.com")
-- Status (Active/Inactive badge)
-- Products Pushed (count, from API if available, or "—")
-- Actions (Deactivate / Delete buttons)
-
-**Add Storefront form fields:**
-- "Store Name" — text input, placeholder: "e.g., Acme Corp Store"
-- "OPS GraphQL URL" — text input, placeholder: "e.g., https://acme.onprintshop.com/graphql"
-- "OAuth Token URL" — text input, placeholder: "e.g., https://acme.onprintshop.com/oauth/token"
-- "Client ID" — text input
-- "Client Secret" — password input (write-only, never shown back)
-- Help text: "You can find these credentials in your OnPrintShop admin panel under Settings > API."
-
-**API calls:**
-```typescript
-// Load customers
-const customers = await api<Customer[]>("/api/customers");
-
-// Create customer
-await api("/api/customers", {
-  method: "POST",
-  body: JSON.stringify({
-    name: formData.name,
-    ops_base_url: formData.opsBaseUrl,
-    ops_token_url: formData.opsTokenUrl,
-    ops_client_id: formData.opsClientId,
-    ops_client_secret: formData.opsClientSecret,
-  }),
-});
-
-// Delete customer
-await api(`/api/customers/${id}`, { method: "DELETE" });
-```
-
-**Empty state:** "No storefronts added. Add your OnPrintShop storefront to start publishing products."
-
-- [ ] **Step 2:** Test with backend running:
-```bash
-# Terminal 1: backend
-cd backend && source .venv/bin/activate && uvicorn main:app --reload --port 8000
-
-# Terminal 2: frontend
-cd frontend && npm run dev
-```
-Open http://localhost:3000/customers — add a test customer, verify it appears in the list, verify delete works.
-
-- [ ] **Step 3:** Commit
-```bash
-git add frontend/src/app/customers/
-git commit -m "feat: Customers (Storefronts) page — list + add form with OAuth2 credentials"
-```
+- **Task 0.4** — Customers (Storefronts) page with list + OAuth2 credential form (`frontend/src/app/customers/page.tsx`)
+- **Task 0.5** — Workflows page with animated pipeline visualizer (`frontend/src/components/workflows/pipeline-view.tsx`)
 
 ---
 
-## Task 0.5: Workflows Page (Pipeline Visualizer)
+## Pending Tasks
 
-**Priority:** After Task 0.4
-**Files:**
-- `frontend/src/app/workflows/page.tsx`
-- `frontend/src/components/workflows/pipeline-view.tsx`
+### Task 3: WSDL Resolver *(CARRIED OVER — START HERE)*
 
-### What this page shows
-
-An animated pipeline diagram showing the data flow: Supplier → Fetch → Normalize → Store → Publish to Store. Each node has a status indicator (idle/running/done/error). Links to the n8n editor.
-
-This is **mostly static for V0** — it becomes live when n8n workflows are deployed in V1e.
-
-### Steps
-
-- [ ] **Step 1:** Create `frontend/src/components/workflows/pipeline-view.tsx`:
-
-A horizontal row of 5 connected nodes:
-
-```
-[Supplier] → [Fetch Data] → [Normalize] → [Store in DB] → [Publish to Store]
-```
-
-Each node is a card with:
-- Icon (use emoji or lucide-react icons)
-- Label
-- Status badge: "Idle" (gray), "Running" (blue pulse), "Done" (green), "Error" (red)
-- Animated connecting lines between nodes (use CSS animation from globals.css `drawLine` keyframe)
-
-Default state: all nodes "Idle" with gray badges.
-
-- [ ] **Step 2:** Create `frontend/src/app/workflows/page.tsx`:
-
-Page layout:
-- Title: "Data Pipeline"
-- Subtitle: "How products flow from suppliers to your storefronts"
-- The `PipelineView` component
-- Below the pipeline: "Open n8n Editor" button linking to `http://localhost:5678` (or configurable URL)
-- Info panel: "Sync schedules are managed in n8n. The pipeline runs automatically once activated."
-
-- [ ] **Step 3:** Test:
-```bash
-cd frontend && npm run dev
-```
-Open http://localhost:3000/workflows — verify the pipeline diagram renders with all 5 nodes connected.
-
-- [ ] **Step 4:** Commit
-```bash
-git add frontend/src/app/workflows/ frontend/src/components/workflows/
-git commit -m "feat: Workflows page with pipeline visualizer — 5-node animated diagram"
-```
-
----
-
-## Task 3: WSDL Resolver
-
-**Priority:** After V0 tasks. Can run in parallel with Sinchana's Task 2 and Urvashi's Task 1.
+**Priority:** **DO THIS FIRST.** Blocks Tanishq's SOAP client (Task 3b) which blocks every V1a downstream task.
 **File to create:** `backend/modules/promostandards/resolver.py`
 
-**Prerequisite:** Sinchana must have created the `backend/modules/promostandards/` directory and `__init__.py` in her Task 2. If she hasn't yet, create the directory yourself:
-```bash
-mkdir -p backend/modules/promostandards
-touch backend/modules/promostandards/__init__.py
-```
-
 ### What this does
-
-The PromoStandards directory API returns endpoint data for each supplier. Each endpoint has a `ServiceType` like "Product Data", "Inventory Levels", etc. But different suppliers register with inconsistent names ("Product Data" vs "ProductData", "Inventory" vs "Inventory Levels"). This resolver normalizes those strings and finds the right WSDL URL.
+PromoStandards directory returns endpoint lists where each endpoint has a `ServiceType` like "Product Data", "Inventory Levels", etc. Different suppliers register with inconsistent names ("Product Data" vs "ProductData"). Your resolver normalizes those strings and returns the right `ProductionURL` for each service type.
 
 ### Steps
 
-- [ ] **Step 1:** Create `backend/modules/promostandards/resolver.py`:
+- [ ] **Step 1:** The `backend/modules/promostandards/` directory already exists (Sinchana created it for Task 2). Confirm with `ls backend/modules/promostandards/` — you should see `__init__.py` and `schemas.py`.
+- [ ] **Step 2:** Create `backend/modules/promostandards/resolver.py`:
 
 ```python
 """Resolve WSDL URLs from cached PromoStandards directory endpoints."""
-
-# PS directory returns ServiceType as strings like "Product Data", "Inventory",
-# "Product Pricing and Configuration", "Media Content". Suppliers register
-# with inconsistent naming. This resolver normalizes for matching.
 
 _SERVICE_TYPE_ALIASES = {
     "product data": "product_data",
@@ -174,29 +48,12 @@ _SERVICE_TYPE_ALIASES = {
 
 
 def _normalize_service_type(raw: str) -> str:
-    """Normalize a PS ServiceType string to a canonical key."""
     return _SERVICE_TYPE_ALIASES.get(raw.strip().lower(), raw.strip().lower())
 
 
 def resolve_wsdl_url(endpoint_cache: list[dict], service_type: str) -> str | None:
-    """Find the ProductionURL for a given service type in the cached endpoints.
-
-    Args:
-        endpoint_cache: List of endpoint dicts from PS directory API.
-            Each dict has keys like ServiceType, ProductionURL, TestURL, Version, Name.
-        service_type: One of "product_data", "inventory", "ppc", "media".
-
-    Returns:
-        The ProductionURL string, or None if not found.
-
-    Example:
-        >>> endpoints = [{"ServiceType": "Product Data", "ProductionURL": "https://ws.sanmar.com/...?wsdl"}]
-        >>> resolve_wsdl_url(endpoints, "product_data")
-        'https://ws.sanmar.com/...?wsdl'
-    """
     target = _normalize_service_type(service_type)
     for ep in endpoint_cache or []:
-        # Try both ServiceType and Name fields — suppliers use different keys
         raw_type = ep.get("ServiceType") or ep.get("Name") or ""
         if _normalize_service_type(raw_type) == target:
             url = ep.get("ProductionURL")
@@ -205,40 +62,146 @@ def resolve_wsdl_url(endpoint_cache: list[dict], service_type: str) -> str | Non
     return None
 ```
 
-- [ ] **Step 2:** Verify it works:
+- [ ] **Step 3:** Sanity-check:
 ```bash
 cd backend && source .venv/bin/activate
 python -c "
 from modules.promostandards.resolver import resolve_wsdl_url
-
-# Test with sample endpoint data (like what PS directory returns)
-endpoints = [
-    {'ServiceType': 'Product Data', 'ProductionURL': 'https://ws.sanmar.com/productdata?wsdl', 'Version': '2.0.0'},
-    {'ServiceType': 'Inventory Levels', 'ProductionURL': 'https://ws.sanmar.com/inventory?wsdl', 'Version': '2.0.0'},
-    {'ServiceType': 'Product Pricing and Configuration', 'ProductionURL': 'https://ws.sanmar.com/ppc?wsdl', 'Version': '1.0.0'},
-    {'ServiceType': 'Media Content', 'ProductionURL': 'https://ws.sanmar.com/media?wsdl', 'Version': '1.0.0'},
+eps = [
+    {'ServiceType': 'Product Data', 'ProductionURL': 'https://ws.sanmar.com/pd?wsdl'},
+    {'ServiceType': 'Inventory Levels', 'ProductionURL': 'https://ws.sanmar.com/inv?wsdl'},
 ]
-
-assert resolve_wsdl_url(endpoints, 'product_data') == 'https://ws.sanmar.com/productdata?wsdl'
-assert resolve_wsdl_url(endpoints, 'inventory') == 'https://ws.sanmar.com/inventory?wsdl'
-assert resolve_wsdl_url(endpoints, 'ppc') == 'https://ws.sanmar.com/ppc?wsdl'
-assert resolve_wsdl_url(endpoints, 'media') == 'https://ws.sanmar.com/media?wsdl'
-
-# Test with inconsistent naming (some suppliers use different strings)
-assert resolve_wsdl_url([{'ServiceType': 'ProductData', 'ProductionURL': 'http://x'}], 'product_data') == 'http://x'
-assert resolve_wsdl_url([{'Name': 'Inventory', 'ProductionURL': 'http://y'}], 'inventory') == 'http://y'
-
-# Test missing
-assert resolve_wsdl_url(endpoints, 'nonexistent') is None
+assert resolve_wsdl_url(eps, 'product_data') == 'https://ws.sanmar.com/pd?wsdl'
+assert resolve_wsdl_url(eps, 'inventory') == 'https://ws.sanmar.com/inv?wsdl'
+assert resolve_wsdl_url([{'ServiceType': 'ProductData', 'ProductionURL': 'x'}], 'product_data') == 'x'
 assert resolve_wsdl_url([], 'product_data') is None
-assert resolve_wsdl_url(None, 'product_data') is None
-
-print('All resolver tests passed!')
+print('resolver OK')
 "
 ```
 
-- [ ] **Step 3:** Commit
-```bash
-git add backend/modules/promostandards/resolver.py
-git commit -m "feat: WSDL resolver — maps PS ServiceType strings to ProductionURL with alias normalization"
+- [ ] **Step 4:** Commit: `feat: WSDL resolver — maps PS ServiceType strings to ProductionURL with alias normalization`
+
+---
+
+### Task 13: Image Pipeline
+
+**Priority:** After Task 3. Independent of all SOAP work.
+**Files to create:**
+- `backend/modules/ops_push/__init__.py`
+- `backend/modules/ops_push/image_pipeline.py`
+- Route added to `backend/modules/ops_push/routes.py`
+**Dependencies:** `Pillow`, `httpx` (both already in requirements.txt)
+
+### What this does
+When n8n pushes a product to OPS, it needs images in the right size/format. This service downloads a supplier's image URL, resizes to 800×800, converts to WebP quality 85, and returns the processed bytes.
+
+### Function signature
+
+```python
+async def process_image(source_url: str) -> bytes:
+    """Download, resize to 800×800, convert to WebP q85. Returns bytes."""
 ```
+
+### Endpoint
+
+```
+GET /api/push/image/{image_id}/processed
+```
+Loads the `ProductImage` row, calls `process_image(image.url)`, returns the WebP bytes with `Content-Type: image/webp`.
+
+### Steps
+
+- [ ] **Step 1:** Create `backend/modules/ops_push/__init__.py` (empty) and `image_pipeline.py`:
+```python
+from io import BytesIO
+import httpx
+from PIL import Image
+
+async def process_image(source_url: str) -> bytes:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.get(source_url)
+        r.raise_for_status()
+    img = Image.open(BytesIO(r.content)).convert("RGB")
+    img.thumbnail((800, 800), Image.Resampling.LANCZOS)
+    out = BytesIO()
+    img.save(out, format="WEBP", quality=85)
+    return out.getvalue()
+```
+
+- [ ] **Step 2:** Create `routes.py` with the endpoint. Stream the bytes via FastAPI `Response(content=..., media_type="image/webp")`. Cache headers: `Cache-Control: public, max-age=86400`.
+- [ ] **Step 3:** Register the router in `backend/main.py`.
+- [ ] **Step 4:** Manual test:
+```bash
+curl -o test.webp http://localhost:8000/api/push/image/{some_image_id}/processed
+file test.webp  # should say "RIFF ... WEBP"
+```
+- [ ] **Step 5:** Commit: `feat: OPS image pipeline — download, resize 800×800, WebP q85`
+
+---
+
+### Task 14: 4Over REST + HMAC Client
+
+**Priority:** After Task 3. Blocked on Christian providing 4Over sandbox credentials for E2E — but the client code can be written and unit-tested independently against sample fixtures.
+**File to create:** `backend/modules/rest_connector/fourover_client.py`
+
+### What this does
+4Over uses HMAC-SHA256 request signing. Every request must include `Authorization: hmac <api_key>:<signature>` where `signature = HMAC-SHA256(private_key, method + path + timestamp)`. You'll build `FourOverClient` using httpx.
+
+### Class skeleton
+
+```python
+import hmac
+import hashlib
+import time
+from datetime import datetime, timezone
+import httpx
+
+class FourOverClient:
+    def __init__(self, base_url: str, auth_config: dict):
+        self.base_url = base_url.rstrip("/")
+        self.api_key = auth_config["api_key"]
+        self.private_key = auth_config["private_key"].encode()
+
+    def _sign(self, method: str, path: str) -> dict:
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        payload = f"{method}{path}{timestamp}".encode()
+        sig = hmac.new(self.private_key, payload, hashlib.sha256).hexdigest()
+        return {
+            "Authorization": f"hmac {self.api_key}:{sig}",
+            "X-Timestamp": timestamp,
+        }
+
+    async def get_categories(self) -> list[dict]: ...
+    async def get_products(self) -> list[dict]: ...
+    async def get_product_options(self, product_uuid: str) -> dict: ...
+    async def get_quote(self, product_uuid: str, options: dict) -> dict: ...
+```
+
+### Steps
+- [ ] **Step 1:** Create `rest_connector/__init__.py` if it doesn't exist (Urvashi may already have).
+- [ ] **Step 2:** Implement the class + 4 methods using httpx `AsyncClient`.
+- [ ] **Step 3:** Write a pytest with a mocked httpx transport to verify the signature header format against a known input/output fixture.
+- [ ] **Step 4:** Commit: `feat: 4Over REST+HMAC client with SHA-256 request signing`
+
+---
+
+### Task 15: 4Over Normalizer (Reuses Field Mapping UI)
+
+**Priority:** After Task 14.
+**File to create:** `backend/modules/rest_connector/fourover_normalizer.py`
+
+### What this does
+4Over products have paper types, coatings, folds — not colors and sizes. You built the Field Mapping UI in V0 Task 16; this is the backend half. It reads the field-mapping config from the DB (keyed by `supplier_id`) and applies transforms to map 4Over JSON → `PSProductData` format (same schemas as SanMar).
+
+### Why reuse PSProductData?
+The existing upsert logic (from Tanishq's Task 4 normalizer) consumes `PSProductData`. Outputting the same shape means the DB layer works unchanged for all 4 supplier types.
+
+### Steps
+- [ ] **Step 1:** Check how the Field Mapping UI stores config — inspect `api-hub/frontend/src/app/mappings/[supplierId]/page.tsx` and find the backend endpoint/table it writes to. Document the schema.
+- [ ] **Step 2:** If no backend mapping table exists yet, create one (`field_mappings` table: `supplier_id`, `source_field`, `target_field`, `transform`). Add model + route to a new `mappings` module or extend `suppliers` module.
+- [ ] **Step 3:** Build `normalize_4over(raw_products, field_mappings) -> list[PSProductData]`. Handle paper/coating/fold as custom options mapped to the `PSProductPart` description field (or extend `PSProductPart` with an `attributes: dict` if cleaner).
+- [ ] **Step 4:** Unit-test with 3 sample 4Over products and a known mapping config.
+- [ ] **Step 5:** Commit: `feat: 4Over → PSProductData normalizer using Field Mapping config`
+
+### Note
+Task 16 (sync route HMAC branch) is Urvashi's — you coordinate by agreeing on the `PSProductData` output shape.

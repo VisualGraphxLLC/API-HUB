@@ -2,8 +2,9 @@
 
 **Completed by:** Vidhi
 **Branch:** `Vidhi`
+**Commit:** `4b18c15`
 **Date:** 2026-04-17
-**Status:** ✅ Done — all tests passed
+**Status:** ✅ Done — all 9 tests passed, committed, pushed, dependencies fulfilled
 
 ---
 
@@ -36,11 +37,24 @@ This URL is stored in our database (cached from the PromoStandards directory) fo
 
 ---
 
-## Files Created
+## Dependencies — What Was Needed Before This Task
+
+| Dependency | Status | Notes |
+|-----------|--------|-------|
+| Task 0.1 — PostgreSQL port fix | ✅ Done (Urvashi) | Backend can now connect to database |
+| Task 0.2 — dotenv path fix | ✅ Done (Urvashi) | `SECRET_KEY` and `POSTGRES_URL` load correctly |
+| Task 0.3 — shadcn/ui install | ✅ Done (Sinchana) | Frontend unblocked |
+| `promostandards/` module directory | ✅ Created by Vidhi | `__init__.py` exists |
+
+All dependencies are fulfilled as of the main merge on 2026-04-17.
+
+---
+
+## Files Created / Modified
 
 | File | Purpose |
 |------|---------|
-| `backend/modules/promostandards/__init__.py` | Empty file — marks the directory as a Python module |
+| `backend/modules/promostandards/__init__.py` | Marks the directory as a Python module — contains `# Initialize promostandards module` |
 | `backend/modules/promostandards/resolver.py` | The resolver — finds the correct WSDL URL from cached supplier endpoints |
 
 ---
@@ -82,8 +96,10 @@ The resolver has a built-in dictionary that maps every known variation to a stan
 | `"inventorylevels"` | `inventory` |
 | `"Product Pricing and Configuration"` | `ppc` |
 | `"pricing"` | `ppc` |
+| `"pricing and configuration"` | `ppc` |
 | `"Media Content"` | `media` |
 | `"mediacontent"` | `media` |
+| `"media"` | `media` |
 
 ---
 
@@ -150,9 +166,53 @@ def resolve_wsdl_url(endpoint_cache: list[dict], service_type: str) -> str | Non
 
 ---
 
+## How to Test Manually
+
+Make sure the backend venv is activated:
+
+```bash
+cd backend && source .venv/bin/activate
+```
+
+Then run:
+
+```bash
+python -c "
+from modules.promostandards.resolver import resolve_wsdl_url
+
+endpoints = [
+    {'ServiceType': 'Product Data', 'ProductionURL': 'https://ws.sanmar.com/productdata?wsdl'},
+    {'ServiceType': 'Inventory Levels', 'ProductionURL': 'https://ws.sanmar.com/inventory?wsdl'},
+    {'ServiceType': 'Product Pricing and Configuration', 'ProductionURL': 'https://ws.sanmar.com/ppc?wsdl'},
+    {'ServiceType': 'Media Content', 'ProductionURL': 'https://ws.sanmar.com/media?wsdl'},
+]
+
+assert resolve_wsdl_url(endpoints, 'product_data') == 'https://ws.sanmar.com/productdata?wsdl'
+assert resolve_wsdl_url(endpoints, 'inventory') == 'https://ws.sanmar.com/inventory?wsdl'
+assert resolve_wsdl_url(endpoints, 'ppc') == 'https://ws.sanmar.com/ppc?wsdl'
+assert resolve_wsdl_url(endpoints, 'media') == 'https://ws.sanmar.com/media?wsdl'
+
+assert resolve_wsdl_url([{'ServiceType': 'ProductData', 'ProductionURL': 'http://x'}], 'product_data') == 'http://x'
+assert resolve_wsdl_url([{'Name': 'Inventory', 'ProductionURL': 'http://y'}], 'inventory') == 'http://y'
+
+assert resolve_wsdl_url(endpoints, 'nonexistent') is None
+assert resolve_wsdl_url([], 'product_data') is None
+assert resolve_wsdl_url(None, 'product_data') is None
+
+print('All resolver tests passed!')
+"
+```
+
+Expected output:
+```
+All resolver tests passed!
+```
+
+---
+
 ## Tests & Verification
 
-All 9 tests were run inside the live Docker container and passed.
+All 9 tests from the task spec were run and passed.
 
 ### Test 1 — Standard supplier naming
 
@@ -186,15 +246,20 @@ Empty endpoint list passed                → returns None, no crash   ✅
 None passed instead of a list             → returns None, no crash   ✅
 ```
 
-**What this proves:** The resolver is safe to use in all situations. It never crashes — it simply returns `None` when it cannot find what was asked for, and the calling code can handle that gracefully.
+**What this proves:** The resolver is safe to use in all situations. It never crashes — it simply returns `None` when it cannot find what was asked for.
 
 ---
 
-### Test output
+## Who Uses This (Downstream Consumers)
 
-```
-All tests passed!
-```
+This resolver is a dependency for the next tasks in the pipeline:
+
+| Task | Owner | File | How it uses the resolver |
+|------|-------|------|--------------------------|
+| Task 3b — SOAP Client | Tanishq | `backend/modules/promostandards/client.py` | Calls `resolve_wsdl_url()` to find the Product Data, Inventory, PPC, and Media WSDL URLs before making SOAP calls |
+| Task 5 — Sync Endpoints | Urvashi | `backend/modules/promostandards/routes.py` | Calls `resolve_wsdl_url()` in the background sync task to get the correct WSDL per service type |
+
+Tanishq cannot start Task 3b until this resolver is merged into `main`. ✅ It is now merged.
 
 ---
 
@@ -207,16 +272,16 @@ PromoStandards Directory API
 Supplier endpoint cache (stored in database)
         │
         ▼
-  WSDL Resolver  ◀── YOU ARE HERE (Task 3)
+  WSDL Resolver  ◀── YOU ARE HERE (Task 3) ✅ DONE
         │
         ▼
-   SOAP Client (Task 3 — next part / Sinchana's Task 2)
+   SOAP Client (Task 3b — Tanishq)
         │
         ▼
-  Normalizer (Task 4 — blocked until Tasks 1, 2, 3 all done)
+  Normalizer (Task 4 — blocked until Tasks 1, 2, 3b all done)
         │
         ▼
-  Sync Endpoints (Task 5)
+  Sync Endpoints (Task 5 — Urvashi)
         │
         ▼
   Full pipeline running
@@ -224,14 +289,14 @@ Supplier endpoint cache (stored in database)
 
 ---
 
-## What Is Still Needed Before the Pipeline Can Run
+## Current Status of Parallel Tasks (as of 2026-04-17)
 
-This task (Task 3) is one of three parallel tasks in V1a. All three must be done before Task 4 (Normalizer) can start:
+All three parallel V1a tasks are now done — Task 4 (Normalizer) is unblocked:
 
 | Task | Owner | Status |
 |------|-------|--------|
-| Task 1 — Schema Updates (add unique constraints, ProductImage model) | Urvashi | ⬜ TODO |
-| Task 2 — PromoStandards Response Schemas (typed Pydantic models) | Sinchana | ⬜ TODO |
-| **Task 3 — WSDL Resolver** | **Vidhi** | **✅ DONE** |
+| Task 1 — Schema Updates (unique constraints, ProductImage model) | Urvashi | ✅ Done — merged to main |
+| Task 2 — PromoStandards Response Schemas (PSProductData, PSInventoryLevel etc.) | Sinchana | ✅ Done — merged to main |
+| **Task 3 — WSDL Resolver** | **Vidhi** | **✅ Done — merged to main** |
 
-Once Tasks 1 and 2 are complete, Task 4 (Normalizer) can begin.
+**Next:** Tanishq starts Task 3b (SOAP Client) → then Task 4 (Normalizer) → then Task 5 (Sync Endpoints).

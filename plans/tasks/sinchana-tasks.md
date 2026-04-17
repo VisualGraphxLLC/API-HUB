@@ -1,292 +1,158 @@
 # Sinchana — Sprint Tasks
 
-**Total: 4 tasks** | Branch: `sinchana-sprint-v1`
+**Status:** 4/4 V1a/V1f sprint tasks shipped. Three new tasks added below for V1c + V1g.
+**Branch:** `sinchana-sprint-v1` (merged) → start `sinchana-sprint-v2`
 
 ---
 
-## Task 0.3: Install shadcn/ui
+## ✅ Completed
 
-**Priority:** Do this FIRST — blocks all other frontend work.
-**Files:** `frontend/` (new `components/ui/` directory created)
-
-### Steps
-
-- [ ] **Step 1:** Navigate to frontend directory
-```bash
-cd api-hub/frontend
-```
-
-- [ ] **Step 2:** Initialize shadcn
-```bash
-npx shadcn@latest init -d
-```
-This creates `components/ui/` and configures Tailwind for shadcn.
-
-- [ ] **Step 3:** Install required components
-```bash
-npx shadcn@latest add button card input table badge separator scroll-area
-```
-
-- [ ] **Step 4:** Verify components installed
-```bash
-ls src/components/ui/
-# Expected: button.tsx  card.tsx  input.tsx  table.tsx  badge.tsx  separator.tsx  scroll-area.tsx
-```
-
-- [ ] **Step 5:** Verify the app still builds
-```bash
-npm run build
-# Expected: no errors
-```
-
-- [ ] **Step 6:** Commit
-```bash
-git add -A
-git commit -m "feat: install shadcn/ui components — button, card, input, table, badge, separator, scroll-area"
-```
+- **Task 0.3** — shadcn/ui installed (`frontend/components.json` + 7 UI components present)
+- **Task 20** — Terminology + sidebar rename (no `_QUERYING_`, `Vendors`, `SOAP`, `WSDL` visible in UI)
+- **Task 21** — Simplified supplier form rewritten as 3-step flow (`frontend/src/components/suppliers/reveal-form.tsx`)
+- **Task 2** — PS response Pydantic schemas (`backend/modules/promostandards/schemas.py` — PSProductData, PSProductPart, PSInventoryLevel, PSPricePoint, PSMediaItem)
 
 ---
 
-## Task 20: Terminology + Loading States + Sidebar Rename
+## Pending Tasks
 
-**Priority:** After Task 0.3
-**Files to modify:**
-- `frontend/src/app/layout.tsx` OR `frontend/src/components/Sidebar.tsx` — sidebar navigation labels
-- `frontend/src/app/page.tsx` — dashboard text
-- `frontend/src/app/products/page.tsx` — page title and loading text
-- `frontend/src/app/products/[id]/page.tsx` — button labels and badges
-- `frontend/src/app/suppliers/page.tsx` — loading text
-- `frontend/src/app/sync/page.tsx` — job type labels
-- `frontend/src/app/markup/page.tsx` — page title (if exists)
-- `frontend/src/app/mappings/page.tsx` — page title
+### Task 8a: S&S Activewear → PSProductData Mapping
 
-### What to change
+**Priority:** Start anytime. Parallel with Urvashi's Task 8 REST client.
+**File to create:** `backend/modules/rest_connector/ss_normalizer.py`
+**Depends on:** V1a Task 2 (your PS schemas — already done) and Urvashi's Task 8 client (in progress)
 
-**Find and replace these strings across ALL frontend files:**
+### What this does
+S&S Activewear returns JSON (not SOAP XML). Your job is the mapping layer: take S&S JSON and emit the same `PSProductData` / `PSProductPart` / `PSInventoryLevel` / `PSPricePoint` / `PSMediaItem` models you already defined in Task 2. The normalizer from V1a Task 4 (Tanishq) consumes these unchanged — no DB work here.
 
-| Find (current) | Replace with | Files |
-|----------------|-------------|-------|
-| `"Vendors"` | `"Suppliers"` | `page.tsx` (dashboard) |
-| `"Technical Index"` | `"Product Catalog"` | `products/page.tsx` |
-| `"Customers"` (in sidebar/nav only) | `"Storefronts"` | sidebar component |
-| `"Push to OPS"` | `"Publish to Store"` | `products/[id]/page.tsx` |
-| `"Sync Jobs"` (in sidebar/nav) | `"Data Updates"` | sidebar component |
-| `"Markup Rules"` (in sidebar/nav) | `"Pricing Rules"` | sidebar component |
-| `"Field Mapping"` or `"Field Mappings"` (in sidebar) | `"Data Configuration"` | sidebar component |
-| `"_QUERYING_INDEX..."` | `"Loading products..."` | `products/page.tsx` |
-| `"_QUERYING_ENDPOINT_REGISTRY..."` | `"Connecting..."` | `suppliers/page.tsx` |
-| `"_FETCHING_METRICS..."` | `"Loading dashboard..."` | `page.tsx` (dashboard) |
-| `"Auth_Error"` | `"Connection Failed"` | any badge/status display |
-| `"delta"` (in sync job type display) | `"Recent Changes"` | `sync/page.tsx` |
-| `"full_sync"` or `"full"` (in sync job type) | `"Full Refresh"` | `sync/page.tsx` |
-| `"inventory_sync_v2"` | `"Inventory Update"` | `page.tsx` (dashboard) |
-| `"delta_product_ingest"` | `"Product Sync"` | `page.tsx` (dashboard) |
-
-**Sidebar section renames:**
-- `"Orchestration"` → `"Products"`
-- `"Management"` → `"Configuration"`
-- `"Catalog"` → `"Product Catalog"`
-- Remove duplicate "Add Supplier" from the Actions section (keep the one on the suppliers page)
-
-**Empty states — add to pages that show empty tables:**
-
-In `products/page.tsx`, when product list is empty:
-```tsx
-<p>No products yet. Connect a supplier to start syncing products.</p>
+### S&S API response shape (reference)
+`GET https://api.ssactivewear.com/V2/Products/` returns:
+```json
+[
+  {
+    "sku": "B00760001",
+    "yourPrice": 3.79,
+    "styleID": 39,
+    "styleName": "PC61",
+    "brandName": "Port & Company",
+    "colorName": "Navy",
+    "sizeName": "M",
+    "qty": 1420,
+    "warehouseAbbr": "IL",
+    "colorFrontImage": "https://cdn.ssactivewear.com/..."
+  }
+]
 ```
 
-In `sync/page.tsx`, when sync jobs is empty:
-```tsx
-<p>No sync history yet. Activate a supplier to see data updates here.</p>
-```
+Each row is a part-level SKU. You group by `styleID` to form `PSProductData`, and each row becomes one `PSProductPart` + `PSInventoryLevel` + `PSPricePoint` + `PSMediaItem`.
 
-In `markup/page.tsx` (if exists), when no rules:
-```tsx
-<p>No pricing rules set. Add a rule to control storefront pricing.</p>
-```
-
-### Steps
-
-- [ ] **Step 1:** Open the sidebar component (`layout.tsx` or `Sidebar.tsx`). Rename all section labels and nav items per the table above.
-
-- [ ] **Step 2:** Open each page file. Find and replace loading state text, badge labels, and page titles.
-
-- [ ] **Step 3:** Add empty state messages to pages that show lists/tables.
-
-- [ ] **Step 4:** Run the frontend and check every page visually
-```bash
-cd frontend && npm run dev
-# Open http://localhost:3000
-# Click through: Dashboard, Product Catalog, Suppliers, Storefronts, Pricing Rules, Data Updates, Data Configuration
-# Verify: ZERO instances of SOAP, WSDL, HMAC, delta, _QUERYING, Auth_Error visible
-```
-
-- [ ] **Step 5:** Commit
-```bash
-git add -A
-git commit -m "feat: rename all technical jargon to business language across frontend"
-```
-
----
-
-## Task 21: Simplified Add Supplier Form (3 steps)
-
-**Priority:** After Task 20
-**Files to modify:**
-- `frontend/src/components/suppliers/reveal-form.tsx` — complete rewrite
-- `frontend/src/app/suppliers/page.tsx` — may need updates
-
-### Current form (5 steps — too complex)
-1. Choose protocol (PromoStandards / REST / HMAC)
-2. Select supplier from grid OR enter custom name + URL
-3. Enter credentials (ID + password)
-4. Test connection (shows "11 active services")
-5. Set sync schedule (4 dropdowns)
-
-### New form (3 steps — business language)
-
-**Step 1: "Choose your supplier"**
-- Search bar at top: placeholder `"Search 994+ suppliers..."`
-- Grid of popular suppliers: SanMar, S&S Activewear, Alphabroder, 4Over (show name + code as badge)
-- Clicking a PS supplier auto-sets `protocol: "promostandards"` and `promostandards_code`
-- Link at bottom: "Can't find yours? Add a custom supplier"
-- **Custom supplier path:** show 3 fields:
-  - "Supplier Name" (text input)
-  - "API Address" (text input, placeholder: `"https://api.example.com"`)
-  - "API Type" (dropdown): `"Standard API"` | `"Secure API (signed requests)"`
-  - Help text under dropdown: "Not sure? Choose 'Standard API' — your supplier's documentation will tell you if signed requests are needed."
-  - "Standard API" maps to `protocol: "rest"`, "Secure API" maps to `protocol: "rest_hmac"`
-
-**Step 2: "Connect your account"**
-- Two fields:
-  - "API Username" (text input, placeholder: `"Your API username"`)
-  - "API Password" (password input)
-- Help text: "Your supplier provides these when you sign up for API access. Contact [supplier name] support if you don't have them."
-- "Test Connection" button
-- Success state: green check + "Connected to [SanMar] — ready to sync"
-- Failure state: red X + "Could not connect. Please check your username and password." + "Try Again" button
-
-**Step 3: "Activate"**
-- Summary card: supplier name, connection status
-- Single dropdown: "How often should we check for updates?"
-  - Options: `"Recommended (automatic)"` | `"Every 30 minutes"` | `"Every hour"` | `"Once a day"`
-  - Default: "Recommended (automatic)"
-- "Activate Supplier" button → loading state → "Supplier Activated!" → redirect to supplier list
-
-**Backend mapping for schedule dropdown:**
-- "Recommended" → `{inv: "30min", price: "daily", prod: "daily", img: "weekly"}`
-- "Every 30 minutes" → `{inv: "30min", price: "30min", prod: "daily", img: "weekly"}`
-- "Every hour" → `{inv: "1hour", price: "1hour", prod: "daily", img: "weekly"}`
-- "Once a day" → `{inv: "daily", price: "daily", prod: "daily", img: "weekly"}`
-
-### Steps
-
-- [ ] **Step 1:** Read the current `reveal-form.tsx` to understand the existing state management and API calls.
-
-- [ ] **Step 2:** Rewrite the component with the 3-step flow. Keep the same API calls (`POST /api/suppliers`, `GET /api/ps-directory/companies`) but change the UI.
-
-- [ ] **Step 3:** Test with the frontend dev server — add a PromoStandards supplier (SanMar) and a custom supplier.
-
-- [ ] **Step 4:** Commit
-```bash
-git add -A
-git commit -m "feat: simplify Add Supplier form from 5 steps to 3 — remove jargon, add help text"
-```
-
----
-
-## Task 2: PromoStandards Response Schemas
-
-**Priority:** After V0 tasks (0.3, 20, 21) are done. Can start in parallel with Urvashi's Task 1 and Vidhi's Task 3.
-**Files to create:**
-- `backend/modules/promostandards/__init__.py` (empty)
-- `backend/modules/promostandards/schemas.py`
-
-### What this is
-
-Pydantic models that represent SOAP XML responses from PromoStandards suppliers. These are **NOT database models** — they're intermediate typed containers. The SOAP client (Task 3) outputs these. The normalizer (Task 4) reads these and writes to the DB.
-
-### Steps
-
-- [ ] **Step 1:** Create the module directory
-```bash
-mkdir -p backend/modules/promostandards
-touch backend/modules/promostandards/__init__.py
-```
-
-- [ ] **Step 2:** Create `backend/modules/promostandards/schemas.py`:
+### Function signature
 
 ```python
-"""Pydantic models for deserialized PromoStandards SOAP responses.
-
-These are NOT database models. They are typed containers for parsed XML,
-giving the normalizer clean input regardless of which supplier the data came from.
-"""
-
-from pydantic import BaseModel
-
-
-class PSProductPart(BaseModel):
-    """A single color/size variant from getProduct response.
-
-    SanMar calls these 'parts' — one 'PC61 Essential Tee' product has
-    parts like 'Navy/M', 'Navy/L', 'White/S'.
-    """
-    part_id: str
-    color_name: str | None = None
-    size_name: str | None = None
-    description: str | None = None
-
-
-class PSProductData(BaseModel):
-    """A product from getProduct or getProductSellable response."""
-    product_id: str
-    product_name: str | None = None
-    description: str | None = None
-    brand: str | None = None
-    categories: list[str] = []
-    product_type: str = "apparel"
-    primary_image_url: str | None = None
-    parts: list[PSProductPart] = []
-
-
-class PSInventoryLevel(BaseModel):
-    """Inventory for one part from getInventoryLevels response.
-
-    quantity_available is capped at 500 per PromoStandards convention.
-    """
-    product_id: str
-    part_id: str
-    quantity_available: int = 0
-    warehouse_code: str | None = None
-
-
-class PSPricePoint(BaseModel):
-    """Price for one part from PPC (Pricing & Configuration) service."""
-    product_id: str
-    part_id: str
-    price: float
-    quantity_min: int = 1
-    quantity_max: int | None = None
-    price_type: str = "piece"  # piece, dozen, case
-
-
-class PSMediaItem(BaseModel):
-    """An image/media asset from Media Content service."""
-    product_id: str
-    url: str
-    media_type: str = "front"  # front, back, side, swatch, detail
-    color_name: str | None = None
+def ss_to_ps_format(
+    ss_products: list[dict],
+) -> tuple[
+    list[PSProductData],
+    list[PSInventoryLevel],
+    list[PSPricePoint],
+    list[PSMediaItem],
+]:
+    """Group S&S part rows by styleID → emit PS-format typed models."""
 ```
 
-- [ ] **Step 3:** Verify the module imports correctly
-```bash
-cd backend && source .venv/bin/activate
-python -c "from modules.promostandards.schemas import PSProductData, PSProductPart, PSInventoryLevel, PSPricePoint, PSMediaItem; print('All schemas imported OK')"
+### Steps
+
+- [ ] **Step 1:** Create `backend/modules/rest_connector/__init__.py` (empty) if Urvashi hasn't already.
+- [ ] **Step 2:** Create `ss_normalizer.py` with the mapping logic. Group by `styleID`, aggregate parts, dedupe images by URL.
+- [ ] **Step 3:** Write a small inline test with 3–5 sample S&S rows that asserts the grouping produces exactly 1 `PSProductData` with correct parts.
+- [ ] **Step 4:** Commit: `feat: S&S JSON → PSProductData mapping (reuses V1a schemas)`
+
+---
+
+### Task 10a: n8n Node — UI Field Definitions for 7 Missing Mutations
+
+**Priority:** Unblocked — can start now.
+**File:** `api-hub/n8n-nodes-onprintshop/nodes/OnPrintShop.node.ts`
+**Depends on:** Nothing (field definitions are declarative)
+
+### What this does
+The OnPrintShop n8n node currently has 4 of 11 required product mutations. Your job is to add the **UI field definitions** for the remaining 7 — the dropdowns, text inputs, and parameter schemas that show up in the n8n editor. Tanishq will wire the GraphQL execution logic in Task 10b.
+
+### Mutations needing UI fields
+
+| Operation | Description | Key input fields |
+|-----------|-------------|------------------|
+| `setProductCategory` | Assign product to OPS category | `product_id`, `category_id` |
+| `setAssignOptions` | Link option groups to product | `product_id`, `option_group_ids[]` |
+| `setProductSize` | Set product dimensions | `product_id`, `width`, `height`, `depth`, `weight`, `unit` |
+| `setProductPages` | Set page count (print products) | `product_id`, `page_count` |
+| `setMasterOptionAttributes` | Define option attributes | `option_group_id`, `attributes[]` |
+| `setMasterOptionAttributePrice` | Price per option attribute | `attribute_id`, `price` |
+| `setProductOptionRules` | Inter-option rules | `product_id`, `rules[]` |
+
+**Exact `input` field shapes come from the OPS Postman collection** (blocker: Tanishq is chasing Christian). Until that arrives, scaffold with best-guess field names and `placeholder: "TBD — see Postman collection"` in descriptions.
+
+### Steps
+
+- [ ] **Step 1:** Read how the existing `setProduct` and `setProductPrice` UI fields are defined in `OnPrintShop.node.ts` (search for `displayOptions` and `resource: 'product'`). Follow that pattern.
+- [ ] **Step 2:** Add option entries to the `operation` dropdown for each of the 7 new mutations. Place them under `resource: 'product'`.
+- [ ] **Step 3:** For each operation, add the parameter field definitions with `displayOptions.show.operation` set to the matching operation name.
+- [ ] **Step 4:** Run `npm run build` in `n8n-nodes-onprintshop/` — must compile cleanly.
+- [ ] **Step 5:** Restart n8n (`docker compose restart n8n`) and verify each new operation appears in the OnPrintShop node's dropdown.
+- [ ] **Step 6:** Commit: `feat: scaffold UI fields for 7 missing OPS product mutations (execution logic pending)`
+
+---
+
+### Task 23a: Scaffold OPS Storefront Config Page (Frontend)
+
+**Priority:** Start after Task 10a or in parallel.
+**Files to create:**
+- `frontend/src/app/products/configure/page.tsx`
+- `frontend/src/components/products/category-assign.tsx`
+- `frontend/src/components/products/options-mapping.tsx`
+- `frontend/src/components/products/pricing-preview.tsx`
+
+### What this does
+Build the frontend shell for V1g Task 23 — the page where users map synced products to OPS categories, options, and pricing rules. Three sections (Categories / Options / Pricing) with mocked data for now. The backend module (`ops_config`) is blocked on OPS credentials, so you're building the UI against stub data that Tanishq will wire later.
+
+### Page layout
+```
+┌─────────────────────────────────────────┐
+│ Storefront Product Setup                │
+│ ─────────────────────────────────────   │
+│ [Tab: Categories] [Options] [Pricing]   │
+│                                         │
+│ <TabContent for active tab>             │
+└─────────────────────────────────────────┘
 ```
 
-- [ ] **Step 4:** Commit
-```bash
-git add backend/modules/promostandards/
-git commit -m "feat: PromoStandards response Pydantic schemas — PSProductData, PSInventoryLevel, PSPricePoint, PSMediaItem"
-```
+Use shadcn `<Tabs>`. Each tab hosts one of the three components.
+
+### Components
+
+**`category-assign.tsx`**
+- Fetches (stubbed) `GET /api/ops/{customer_id}/categories` — use hardcoded sample until backend exists: `[{id: "c1", name: "T-Shirts"}, {id: "c2", name: "Polos"}]`
+- Table of synced products with a category dropdown per row
+- "Save Mapping" button (no-op for now — logs to console)
+
+**`options-mapping.tsx`**
+- Stubbed OPS master options: Color, Size, Material
+- Side-by-side list: supplier option values (left) ↔ OPS option attributes (right)
+- Drag-or-dropdown mapping UI (use shadcn `<Select>` per row for simplicity)
+
+**`pricing-preview.tsx`**
+- Product picker (dropdown of synced products)
+- Shows: base price → markup applied → rounded → final display price
+- Read-only preview — changes happen on the existing Pricing Rules page
+
+### Steps
+- [ ] **Step 1:** Add "Product Setup" link to sidebar (edit `components/Sidebar.tsx` — place under "Configuration" section, route `/products/configure`).
+- [ ] **Step 2:** Scaffold `page.tsx` with shadcn Tabs + three empty component imports.
+- [ ] **Step 3:** Build each of the three components with stub data. Include empty states and loading skeletons.
+- [ ] **Step 4:** Verify `npm run dev` renders the page cleanly at `/products/configure`.
+- [ ] **Step 5:** Commit: `feat: scaffold Storefront Product Setup page (Categories / Options / Pricing tabs with stub data)`
+
+### Notes
+- Do NOT hit any OPS API or `/api/ops/*` endpoint yet. Those endpoints don't exist.
+- Use `TODO(ops-config)` comments wherever you stub data so Tanishq can grep for them later.
+- Keep the visual design consistent with existing Blueprint design tokens (Outfit font, blueprint blue `#1e4d92`, paper `#f2f0ed`).

@@ -1,20 +1,22 @@
 # Vidhi — Sprint Tasks
 
-**Status:** 2/3 V0 tasks shipped. Task 3 (resolver) still pending. Three new V1c/V1d tasks added below.
-**Branch:** `vidhi-sprint-v1` (mostly merged) → start `vidhi-sprint-v2` after Task 3
+**Status:** 4/6 tasks shipped. Tasks 14, 15 remaining.
+**Branch:** `Vidhi` — all completed work pushed to remote
 
 ---
 
 ## ✅ Completed
 
-- **Task 0.4** — Customers (Storefronts) page with list + OAuth2 credential form (`frontend/src/app/customers/page.tsx`)
-- **Task 0.5** — Workflows page with animated pipeline visualizer (`frontend/src/components/workflows/pipeline-view.tsx`)
+- **Task 0.4** — Customers (Storefronts) page with list + OAuth2 credential form (`frontend/src/app/customers/page.tsx`) — commit `e1156ec`
+- **Task 0.5** — Workflows page with animated pipeline visualizer (`frontend/src/components/workflows/pipeline-view.tsx`) — commit `8985dc6`
+- **Task 3** — WSDL Resolver (`backend/modules/promostandards/resolver.py`) — commit `4b18c15` — all 9 tests passed
+- **Task 13** — OPS Image Pipeline (`backend/modules/ops_push/image_pipeline.py` + `routes.py`) — commit `ce9837d` — E2E tested: download → resize 800×800 → WebP q85 → served at `GET /api/push/image/{image_id}/processed`
 
 ---
 
 ## Pending Tasks
 
-### Task 3: WSDL Resolver *(CARRIED OVER — START HERE)*
+### Task 3: WSDL Resolver *(✅ COMPLETED — commit `4b18c15`)*
 
 **Priority:** **DO THIS FIRST.** Blocks Tanishq's SOAP client (Task 3b) which blocks every V1a downstream task.
 **File to create:** `backend/modules/promostandards/resolver.py`
@@ -24,8 +26,8 @@ PromoStandards directory returns endpoint lists where each endpoint has a `Servi
 
 ### Steps
 
-- [ ] **Step 1:** The `backend/modules/promostandards/` directory already exists (Sinchana created it for Task 2). Confirm with `ls backend/modules/promostandards/` — you should see `__init__.py` and `schemas.py`.
-- [ ] **Step 2:** Create `backend/modules/promostandards/resolver.py`:
+- [x] **Step 1:** The `backend/modules/promostandards/` directory already exists (Sinchana created it for Task 2). Confirm with `ls backend/modules/promostandards/` — you should see `__init__.py` and `schemas.py`.
+- [x] **Step 2:** Create `backend/modules/promostandards/resolver.py`:
 
 ```python
 """Resolve WSDL URLs from cached PromoStandards directory endpoints."""
@@ -62,7 +64,7 @@ def resolve_wsdl_url(endpoint_cache: list[dict], service_type: str) -> str | Non
     return None
 ```
 
-- [ ] **Step 3:** Sanity-check:
+- [x] **Step 3:** Sanity-check:
 ```bash
 cd backend && source .venv/bin/activate
 python -c "
@@ -79,11 +81,11 @@ print('resolver OK')
 "
 ```
 
-- [ ] **Step 4:** Commit: `feat: WSDL resolver — maps PS ServiceType strings to ProductionURL with alias normalization`
+- [x] **Step 4:** Commit: `feat: WSDL resolver — maps PS ServiceType strings to ProductionURL with alias normalization` — commit `4b18c15` ✅
 
 ---
 
-### Task 13: Image Pipeline
+### Task 13: Image Pipeline *(✅ COMPLETED — commit `ce9837d`)*
 
 **Priority:** After Task 3. Independent of all SOAP work.
 **Files to create:**
@@ -111,7 +113,7 @@ Loads the `ProductImage` row, calls `process_image(image.url)`, returns the WebP
 
 ### Steps
 
-- [ ] **Step 1:** Create `backend/modules/ops_push/__init__.py` (empty) and `image_pipeline.py`:
+- [x] **Step 1:** Create `backend/modules/ops_push/__init__.py` (empty) and `image_pipeline.py`:
 ```python
 from io import BytesIO
 import httpx
@@ -128,14 +130,15 @@ async def process_image(source_url: str) -> bytes:
     return out.getvalue()
 ```
 
-- [ ] **Step 2:** Create `routes.py` with the endpoint. Stream the bytes via FastAPI `Response(content=..., media_type="image/webp")`. Cache headers: `Cache-Control: public, max-age=86400`.
-- [ ] **Step 3:** Register the router in `backend/main.py`.
-- [ ] **Step 4:** Manual test:
+- [x] **Step 2:** Create `routes.py` with the endpoint. Stream the bytes via FastAPI `Response(content=..., media_type="image/webp")`. Cache headers: `Cache-Control: public, max-age=86400`.
+- [x] **Step 3:** Register the router in `backend/main.py`.
+- [x] **Step 4:** Manual test:
 ```bash
 curl -o test.webp http://localhost:8000/api/push/image/{some_image_id}/processed
 file test.webp  # should say "RIFF ... WEBP"
 ```
-- [ ] **Step 5:** Commit: `feat: OPS image pipeline — download, resize 800×800, WebP q85`
+Verified: `file` output → `RIFF (little-endian) data, Web/P image, VP8 encoding, 100x100`. Also tested live in Chrome — returned WebP pig image ✅
+- [x] **Step 5:** Commit: `feat: OPS image pipeline — download, resize 800×800, WebP q85` — commit `ce9837d` ✅
 
 ---
 

@@ -14,7 +14,7 @@ export interface PipelineNode {
 }
 
 const STATUS_COLOR: Record<NodeStatus, string> = {
-  idle:    "var(--ink-muted)",
+  idle:    "var(--blue)",
   running: "var(--blue)",
   done:    "var(--green)",
   error:   "var(--red)",
@@ -159,20 +159,25 @@ interface Props {
 
 export default function PipelineView({ nodes }: Props) {
   return (
-    <div className="flex items-center overflow-x-auto py-6 px-2">
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-evenly", padding: "28px 24px", overflowX: "auto" }}>
       {nodes.map((node, i) => (
-        <div key={node.id} className="flex items-center shrink-0">
+        <div key={node.id} style={{ display: "flex", alignItems: "center", flex: 1 }}>
           <div
-            className="rounded-xl border px-5 py-4 min-w-[148px] text-center transition-all duration-300"
             style={{
-              borderColor: STATUS_COLOR[node.status],
-              background: STATUS_BG[node.status],
-              boxShadow:
-                node.status === "running"
-                  ? `0 0 16px ${STATUS_COLOR[node.status]}30`
-                  : node.status === "error"
-                  ? `0 0 8px ${STATUS_COLOR[node.status]}20`
-                  : "none",
+              flex: 1,
+              borderRadius: 12,
+              border: `1.5px solid ${node.status === "idle" ? "var(--border)" : STATUS_COLOR[node.status]}`,
+              background: node.status === "idle" ? "var(--vellum)" : STATUS_BG[node.status],
+              padding: "20px 16px",
+              textAlign: "center",
+              transition: "all 0.3s",
+              boxShadow: node.status === "idle"
+                ? "4px 6px 0 var(--shadow)"
+                : node.status === "running"
+                ? `0 0 16px ${STATUS_COLOR[node.status]}30`
+                : node.status === "error"
+                ? `0 0 8px ${STATUS_COLOR[node.status]}20`
+                : "4px 6px 0 var(--shadow)",
             }}
           >
             {/* Icon */}
@@ -240,7 +245,11 @@ export default function PipelineView({ nodes }: Props) {
             </div>
           </div>
 
-          {i < nodes.length - 1 && <Connector leftStatus={node.status} />}
+          {i < nodes.length - 1 && (
+            <div style={{ flexShrink: 0, width: 48 }}>
+              <Connector leftStatus={node.status} />
+            </div>
+          )}
         </div>
       ))}
     </div>

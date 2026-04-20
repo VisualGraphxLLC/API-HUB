@@ -3,60 +3,27 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Customer } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 function hostname(url: string) {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
+  try { return new URL(url).hostname; } catch { return url; }
+}
+
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
 }
 
 function validateForm(f: FormState) {
   const errors: Partial<Record<keyof FormState, string>> = {};
   if (!f.name.trim()) errors.name = "Required";
-  if (!f.ops_base_url.trim()) {
-    errors.ops_base_url = "Required";
-  } else {
-    try { new URL(f.ops_base_url); } catch { errors.ops_base_url = "Must be a valid URL"; }
-  }
-  if (!f.ops_token_url.trim()) {
-    errors.ops_token_url = "Required";
-  } else {
-    try { new URL(f.ops_token_url); } catch { errors.ops_token_url = "Must be a valid URL"; }
-  }
+  if (!f.ops_base_url.trim()) { errors.ops_base_url = "Required"; }
+  else { try { new URL(f.ops_base_url); } catch { errors.ops_base_url = "Must be a valid URL"; } }
+  if (!f.ops_token_url.trim()) { errors.ops_token_url = "Required"; }
+  else { try { new URL(f.ops_token_url); } catch { errors.ops_token_url = "Must be a valid URL"; } }
   if (!f.ops_client_id.trim()) errors.ops_client_id = "Required";
   if (!f.ops_client_secret.trim()) errors.ops_client_secret = "Required";
   return errors;
-}
-
-function OAuth2Badge() {
-  return (
-    <Badge
-      style={{
-        background: "var(--blue-pale)",
-        color: "var(--blue)",
-        border: "none",
-        fontFamily: "var(--font-mono)",
-      }}
-    >
-      OAuth2
-    </Badge>
-  );
 }
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -70,12 +37,54 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  name: "",
-  ops_base_url: "",
-  ops_token_url: "",
-  ops_client_id: "",
-  ops_client_secret: "",
+  name: "", ops_base_url: "", ops_token_url: "", ops_client_id: "", ops_client_secret: "",
 };
+
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <div style={{
+      width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+      background: "var(--blue-pale)", color: "var(--blue)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontWeight: 800, fontSize: 12, fontFamily: "var(--font-mono)",
+      border: "1.5px solid var(--border)",
+    }}>
+      {initials(name)}
+    </div>
+  );
+}
+
+// ─── Field ───────────────────────────────────────────────────────────────────
+
+function Field({
+  label, value, onChange, placeholder, type = "text", error,
+}: {
+  label: string; value: string; onChange: (v: string) => void;
+  placeholder?: string; type?: string; error?: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-muted)", fontFamily: "var(--font-mono)" }}>
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          padding: "8px 12px", fontSize: 14, borderRadius: 6,
+          border: `1.5px solid ${error ? "var(--red)" : "var(--border)"}`,
+          background: "white", color: "var(--ink)", outline: "none",
+          fontFamily: "var(--font-sans)",
+        }}
+      />
+      {error && <span style={{ fontSize: 11, color: "var(--red)" }}>{error}</span>}
+    </div>
+  );
+}
 
 // ─── page ────────────────────────────────────────────────────────────────────
 
@@ -109,46 +118,34 @@ export default function CustomersPage() {
 
   async function handleAdd() {
     const errors = validateForm(form);
-    if (Object.keys(errors).length) {
-      setFormErrors(errors);
-      return;
-    }
-    setSaving(true);
-    setSaveError(null);
+    if (Object.keys(errors).length) { setFormErrors(errors); return; }
+    setSaving(true); setSaveError(null);
     try {
       const created = await api<Customer>("/api/customers", {
         method: "POST",
         body: JSON.stringify({
-          name: form.name,
-          ops_base_url: form.ops_base_url,
-          ops_token_url: form.ops_token_url,
-          ops_client_id: form.ops_client_id,
+          name: form.name, ops_base_url: form.ops_base_url,
+          ops_token_url: form.ops_token_url, ops_client_id: form.ops_client_id,
           ops_client_secret: form.ops_client_secret,
         }),
       });
       setCustomers((prev) => [created, ...prev]);
-      setShowForm(false);
-      setForm(EMPTY_FORM);
+      setShowForm(false); setForm(EMPTY_FORM);
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   async function handleDeactivate(customer: Customer) {
     setDeactivating(customer.id);
     try {
       const updated = await api<Customer>(`/api/customers/${customer.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ is_active: !customer.is_active }),
+        method: "PATCH", body: JSON.stringify({ is_active: !customer.is_active }),
       });
       setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Failed to update");
-    } finally {
-      setDeactivating(null);
-    }
+    } finally { setDeactivating(null); }
   }
 
   async function handleDelete(id: string) {
@@ -159,317 +156,243 @@ export default function CustomersPage() {
       setCustomers((prev) => prev.filter((c) => c.id !== id));
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Delete failed");
-    } finally {
-      setDeleting(null);
-    }
+    } finally { setDeleting(null); }
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6">
+    <div className="screen active">
+
+      {/* ── Header ── */}
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--ink)" }}>
-            Storefronts
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-muted)" }}>
-            OnPrintShop storefront configurations
-          </p>
+          <div className="page-title">Storefronts</div>
+          <div className="page-subtitle">
+            OnPrintShop storefronts — each one is an independent OPS instance
+          </div>
         </div>
         {!showForm && (
-          <Button
-            onClick={() => {
-              setShowForm(true);
-              setSaveError(null);
-              setFormErrors({});
-            }}
-          >
+          <button className="btn btn-primary" onClick={() => { setShowForm(true); setSaveError(null); setFormErrors({}); }}>
             + Add Storefront
-          </Button>
+          </button>
         )}
       </div>
 
-      <div className="mb-5" style={{ borderBottom: "1px solid var(--border)" }} />
-
-      {/* Add Storefront form */}
+      {/* ── Add form ── */}
       {showForm && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle
-              className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "var(--ink-muted)", fontFamily: "var(--font-mono)" }}
-            >
-              New Storefront
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {/* Store Name */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                  Store Name
-                </label>
-                <Input
-                  placeholder="e.g., Acme Corp Store"
-                  value={form.name}
-                  onChange={(e) => setField("name")(e.target.value)}
-                  className={formErrors.name ? "border-red-500" : ""}
-                />
-                {formErrors.name && (
-                  <p className="text-xs" style={{ color: "var(--red)" }}>{formErrors.name}</p>
-                )}
-              </div>
-
-              {/* OPS GraphQL URL */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                  OPS GraphQL URL
-                </label>
-                <Input
-                  type="url"
-                  placeholder="e.g., https://acme.onprintshop.com/graphql"
-                  value={form.ops_base_url}
-                  onChange={(e) => setField("ops_base_url")(e.target.value)}
-                  className={formErrors.ops_base_url ? "border-red-500" : ""}
-                />
-                {formErrors.ops_base_url && (
-                  <p className="text-xs" style={{ color: "var(--red)" }}>{formErrors.ops_base_url}</p>
-                )}
-              </div>
-
-              {/* OAuth Token URL */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                  OAuth Token URL
-                </label>
-                <Input
-                  type="url"
-                  placeholder="e.g., https://acme.onprintshop.com/oauth/token"
-                  value={form.ops_token_url}
-                  onChange={(e) => setField("ops_token_url")(e.target.value)}
-                  className={formErrors.ops_token_url ? "border-red-500" : ""}
-                />
-                {formErrors.ops_token_url && (
-                  <p className="text-xs" style={{ color: "var(--red)" }}>{formErrors.ops_token_url}</p>
-                )}
-              </div>
-
-              {/* Client ID */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                  Client ID
-                </label>
-                <Input
-                  placeholder="Client ID"
-                  value={form.ops_client_id}
-                  onChange={(e) => setField("ops_client_id")(e.target.value)}
-                  className={formErrors.ops_client_id ? "border-red-500" : ""}
-                />
-                {formErrors.ops_client_id && (
-                  <p className="text-xs" style={{ color: "var(--red)" }}>{formErrors.ops_client_id}</p>
-                )}
-              </div>
-
-              {/* Client Secret */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                  Client Secret
-                </label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={form.ops_client_secret}
-                  onChange={(e) => setField("ops_client_secret")(e.target.value)}
-                  className={formErrors.ops_client_secret ? "border-red-500" : ""}
-                />
-                {formErrors.ops_client_secret && (
-                  <p className="text-xs" style={{ color: "var(--red)" }}>{formErrors.ops_client_secret}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Help text */}
-            <p className="text-xs mb-4" style={{ color: "var(--ink-muted)" }}>
-              You can find these credentials in your OnPrintShop admin panel under Settings &gt; API.
+        <div className="panel" style={{ marginBottom: 24 }}>
+          <div className="panel-header">
+            <span className="panel-title">New Storefront</span>
+            <button className="btn btn-ghost" style={{ fontSize: 13, padding: "4px 12px" }}
+              onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setFormErrors({}); }}>
+              Cancel
+            </button>
+          </div>
+          <div style={{ padding: "20px 24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Field label="Store Name" value={form.name} onChange={setField("name")}
+              placeholder="e.g., Acme Corp Store" error={formErrors.name} />
+            <Field label="OPS GraphQL URL" value={form.ops_base_url} onChange={setField("ops_base_url")}
+              placeholder="https://acme.onprintshop.com/graphql" type="url" error={formErrors.ops_base_url} />
+            <Field label="OAuth Token URL" value={form.ops_token_url} onChange={setField("ops_token_url")}
+              placeholder="https://acme.onprintshop.com/oauth/token" type="url" error={formErrors.ops_token_url} />
+            <Field label="Client ID" value={form.ops_client_id} onChange={setField("ops_client_id")}
+              placeholder="Client ID" error={formErrors.ops_client_id} />
+            <Field label="Client Secret" value={form.ops_client_secret} onChange={setField("ops_client_secret")}
+              placeholder="••••••••" type="password" error={formErrors.ops_client_secret} />
+          </div>
+          <div style={{ padding: "0 24px 20px" }}>
+            <p style={{ fontSize: 12, color: "var(--ink-muted)", marginBottom: 14 }}>
+              Find credentials in your OnPrintShop admin under Settings › API.
+              The client secret is encrypted and never exposed after saving.
             </p>
-
             {saveError && (
-              <div
-                className="text-xs mb-4 px-3 py-2 rounded"
-                style={{
-                  background: "rgba(185,50,50,0.08)",
-                  color: "var(--red)",
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
+              <div style={{
+                fontSize: 12, padding: "8px 12px", borderRadius: 6, marginBottom: 12,
+                background: "var(--red-pale)", color: "var(--red)", fontFamily: "var(--font-mono)",
+              }}>
                 {saveError}
               </div>
             )}
-
-            <div className="flex gap-3">
-              <Button onClick={handleAdd} disabled={saving}>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-primary" onClick={handleAdd} disabled={saving}>
                 {saving ? "Saving…" : "Save Storefront"}
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowForm(false);
-                  setForm(EMPTY_FORM);
-                  setFormErrors({});
-                }}
-              >
+              </button>
+              <button className="btn btn-ghost"
+                onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setFormErrors({}); }}>
                 Cancel
-              </Button>
+              </button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      {/* Fetch error */}
+      {/* ── Fetch error ── */}
       {fetchError && (
-        <div
-          className="rounded-lg border px-4 py-3 mb-5 text-sm"
-          style={{
-            borderColor: "var(--red)",
-            color: "var(--red)",
-            background: "rgba(185,50,50,0.06)",
-          }}
-        >
+        <div style={{
+          padding: "12px 16px", borderRadius: 8, marginBottom: 20, fontSize: 13,
+          border: "1.5px solid var(--red)", color: "var(--red)", background: "var(--red-pale)",
+        }}>
           Failed to load storefronts: {fetchError}
         </div>
       )}
 
-      {/* Table */}
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Store Name</TableHead>
-              <TableHead>OPS URL</TableHead>
-              <TableHead>Auth</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Products Pushed</TableHead>
-              <TableHead>Pricing Rules</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+      {/* ── Table ── */}
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">Storefront Directory</span>
+          <span style={{ fontSize: 12, color: "var(--ink-muted)", fontFamily: "var(--font-mono)" }}>
+            {!loading && `${customers.length} storefront${customers.length !== 1 ? "s" : ""}`}
+          </span>
+        </div>
 
-          <TableBody>
+        <table style={{ width: "100%" }}>
+          <thead>
+            <tr>
+              <th>Storefront</th>
+              <th>OPS Endpoint</th>
+              <th>Status</th>
+              <th>Products Pushed</th>
+              <th>Pricing Rules</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
             {/* Loading skeleton */}
-            {loading &&
-              [1, 2, 3].map((i) => (
-                <TableRow key={i}>
-                  {[200, 180, 70, 80, 100, 90, 120].map((w, j) => (
-                    <TableCell key={j}>
-                      <div
-                        className="h-3 rounded animate-pulse"
-                        style={{ width: w, background: "var(--paper-warm)" }}
-                      />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
+            {loading && [1, 2, 3].map((i) => (
+              <tr key={i}>
+                {[220, 160, 70, 90, 90, 130].map((w, j) => (
+                  <td key={j}>
+                    <div style={{
+                      height: 12, width: w, borderRadius: 4,
+                      background: "var(--paper-warm)",
+                      animation: "pulse 1.5s ease-in-out infinite",
+                    }} />
+                  </td>
+                ))}
+              </tr>
+            ))}
 
             {/* Rows */}
-            {!loading &&
-              customers.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-semibold" style={{ color: "var(--ink)" }}>
-                    {c.name}
-                  </TableCell>
+            {!loading && customers.map((c) => (
+              <tr key={c.id}>
 
-                  <TableCell>
-                    <a
-                      href={c.ops_base_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm hover:underline"
-                      style={{ color: "var(--blue)" }}
-                    >
-                      {hostname(c.ops_base_url)}
-                    </a>
-                  </TableCell>
-
-                  <TableCell>
-                    <OAuth2Badge />
-                  </TableCell>
-
-                  <TableCell>
-                    {c.is_active ? (
-                      <Badge
-                        className="gap-1"
-                        style={{
-                          background: "rgba(36,122,82,0.1)",
-                          color: "var(--green)",
-                          border: "none",
-                        }}
-                      >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full inline-block"
-                          style={{ background: "var(--green)" }}
-                        />
-                        Active
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
-                  </TableCell>
-
-                  <TableCell style={{ fontFamily: "var(--font-mono)" }}>
-                    {c.products_pushed > 0 ? c.products_pushed.toLocaleString() : "—"}
-                  </TableCell>
-
-                  <TableCell style={{ color: "var(--ink-muted)" }}>
-                    {c.markup_rules_count === 0
-                      ? "—"
-                      : `${c.markup_rules_count} ${c.markup_rules_count === 1 ? "rule" : "rules"}`}
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={deactivating === c.id}
-                        onClick={() => handleDeactivate(c)}
-                        style={{ color: "var(--blue)" }}
-                      >
-                        {deactivating === c.id
-                          ? "…"
-                          : c.is_active
-                          ? "Deactivate"
-                          : "Activate"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={deleting === c.id}
-                        onClick={() => handleDelete(c.id)}
-                        style={{ color: "var(--red)" }}
-                      >
-                        {deleting === c.id ? "…" : "Delete"}
-                      </Button>
+                {/* Name + avatar */}
+                <td>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Avatar name={c.name} />
+                    <div>
+                      <div className="cell-primary">{c.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--ink-muted)", fontFamily: "var(--font-mono)" }}>
+                        {c.ops_client_id}
+                      </div>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                  </div>
+                </td>
+
+                {/* OPS URL */}
+                <td>
+                  <a href={c.ops_base_url} target="_blank" rel="noopener noreferrer"
+                    style={{ color: "var(--blue)", fontSize: 13, textDecoration: "none", fontWeight: 500 }}
+                    onMouseOver={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                    onMouseOut={(e) => (e.currentTarget.style.textDecoration = "none")}
+                  >
+                    {hostname(c.ops_base_url)}
+                  </a>
+                  <div style={{ fontSize: 11, color: "var(--ink-muted)", marginTop: 2 }}>OAuth2</div>
+                </td>
+
+                {/* Status */}
+                <td>
+                  {c.is_active ? (
+                    <span className="badge badge-ok">
+                      <span className="badge-dot" style={{ background: "var(--green)" }} />
+                      Active
+                    </span>
+                  ) : (
+                    <span className="badge" style={{ background: "var(--paper)", color: "var(--ink-muted)", border: "1px solid var(--border)" }}>
+                      <span className="badge-dot" style={{ background: "var(--ink-muted)" }} />
+                      Inactive
+                    </span>
+                  )}
+                </td>
+
+                {/* Products pushed */}
+                <td className="cell-mono">
+                  {c.products_pushed > 0
+                    ? c.products_pushed.toLocaleString()
+                    : <span style={{ color: "var(--ink-faint)" }}>—</span>}
+                </td>
+
+                {/* Pricing rules */}
+                <td>
+                  {c.markup_rules_count > 0 ? (
+                    <span className="cell-tag">
+                      {c.markup_rules_count} {c.markup_rules_count === 1 ? "rule" : "rules"}
+                    </span>
+                  ) : (
+                    <a href="/pricing-rules" style={{ fontSize: 12, color: "var(--blue)", textDecoration: "none", fontWeight: 600 }}>
+                      + Add rules
+                    </a>
+                  )}
+                </td>
+
+                {/* Actions */}
+                <td>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      onClick={() => handleDeactivate(c)}
+                      disabled={deactivating === c.id}
+                      style={{
+                        fontSize: 12, fontWeight: 600, padding: "4px 10px",
+                        border: "1.5px solid var(--border)", borderRadius: 5,
+                        background: "white", color: "var(--ink-light)", cursor: "pointer",
+                      }}
+                    >
+                      {deactivating === c.id ? "…" : c.is_active ? "Deactivate" : "Activate"}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      disabled={deleting === c.id}
+                      style={{
+                        fontSize: 12, fontWeight: 600, padding: "4px 10px",
+                        border: "1.5px solid transparent", borderRadius: 5,
+                        background: "transparent", color: "var(--red)", cursor: "pointer",
+                      }}
+                    >
+                      {deleting === c.id ? "…" : "Delete"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
 
             {/* Empty state */}
             {!loading && customers.length === 0 && !fetchError && (
-              <TableRow>
-                <TableCell colSpan={7} className="py-16 text-center">
-                  <div className="text-sm font-semibold mb-1" style={{ color: "var(--ink)" }}>
-                    No storefronts added.
+              <tr>
+                <td colSpan={6} style={{ padding: "60px 24px", textAlign: "center" }}>
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 12, margin: "0 auto 16px",
+                    background: "var(--blue-pale)", color: "var(--blue)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 22,
+                  }}>
+                    🏪
                   </div>
-                  <div className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                    Add your OnPrintShop storefront to start publishing products.
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", marginBottom: 6 }}>
+                    No storefronts yet
                   </div>
-                </TableCell>
-              </TableRow>
+                  <div style={{ fontSize: 13, color: "var(--ink-muted)", marginBottom: 20 }}>
+                    Add your first OnPrintShop storefront to start publishing products.
+                  </div>
+                  <button className="btn btn-primary"
+                    onClick={() => { setShowForm(true); setSaveError(null); setFormErrors({}); }}>
+                    + Add Storefront
+                  </button>
+                </td>
+              </tr>
             )}
-          </TableBody>
-        </Table>
-      </Card>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -3,84 +3,103 @@
 **Sprint:** Storefront UI redesign
 **Spec:** `docs/superpowers/specs/2026-04-20-storefront-ui-redesign-design.md`
 **Implementation plan:** `docs/superpowers/plans/2026-04-20-storefront-ui-redesign.md`
-**Load:** 8 tasks (heavy — shell, top bar, PDP)
-**Branch:** cut from `main` as `vidhi/storefront-ui-<slug>` per task. One PR per task.
-
-> Read the spec once before starting. It defines the two-pane PDP + sticky info + breadcrumb + description + related. The plan file has full code for each step — copy verbatim.
+**Branch:** cut from `main` as `vidhi/storefront-<slug>` per task. One PR per task.
 
 ---
 
-## Priority order
+## Overview
 
-1. **Plan Task 5 — Storefront layout skeleton** (`frontend/src/app/storefront/vg/layout.tsx`)
-   - Tiny shim that wraps children with `<StorefrontShell>`.
-   - Paired stub `storefront-shell.tsx` — plain min-height container for now. (Replaced in Task 9.)
-   - Acceptance: `/storefront/vg` returns 200 with new shell wrapping old page content.
+You own the layout shell (top bar + storefront shell) and the full PDP (layout, gallery keyboard nav, sanitized description, related scroller, PDP page). **All 8 tasks run in parallel** — they touch disjoint files. Ship in any order. Stub external imports when needed.
+
+## Files you own (nobody else writes these)
+
+- `frontend/src/app/storefront/vg/layout.tsx` — NEW
+- `frontend/src/components/storefront/storefront-shell.tsx` — NEW (Task 5 stub, Task 9 real)
+- `frontend/src/components/storefront/search-context.tsx` — NEW
+- `frontend/src/components/storefront/top-bar.tsx` — NEW
+- `frontend/src/components/storefront/pdp-layout.tsx` — NEW
+- `frontend/src/components/storefront/description-html.tsx` — NEW
+- `frontend/src/components/storefront/related-products.tsx` — NEW
+- `frontend/src/components/storefront/image-gallery.tsx` — EDIT
+- `frontend/src/app/storefront/vg/product/[product_id]/page.tsx` — REWRITE
+- `frontend/src/app/globals.css` — EDIT (add `.prose-storefront` classes)
+- `frontend/package.json` + `frontend/package-lock.json` — EDIT (add `isomorphic-dompurify`)
+
+## Integration contracts (other people's files you import)
+
+| Imported from | Component | Stub strategy if not yet shipped |
+|---|---|---|
+| Sinchana 8 | `<LeftRail categories={} counts={} />` | Stub that renders empty `<aside />` |
+| Sinchana 10 | `<MobileFilterSheet categories={} counts={} />` | Stub that returns `null` |
+| Sinchana 13 | Extended `ProductListItem` shape | Type-cast to `any` inside related-products if Sinchana hasn't extended `types.ts` yet |
+| Urvashi 3 | `ProductRead.category_id: string \| null` | Cast `as Product & { category_id?: string }` (already in current code) |
+
+If Sinchana hasn't shipped her components, add placeholder at the top of `storefront-shell.tsx`:
+```ts
+function LeftRail() { return null; }           // replaced by Sinchana 8
+function MobileFilterSheet() { return null; }  // replaced by Sinchana 10
+```
+Remove the stubs when her PRs merge.
+
+---
+
+## Tasks
+
+1. **Plan Task 5 — Storefront layout skeleton**
+   - `app/storefront/vg/layout.tsx`: tiny shim `<StorefrontShell>{children}</StorefrontShell>`.
+   - `storefront-shell.tsx`: bare container for now. Task 9 replaces it with real composition.
+   - Acceptance: `/storefront/vg` returns 200 with the new shell wrapping whatever the page renders.
 
 2. **Plan Task 7 — TopBar + SearchContext**
-   - `frontend/src/components/storefront/search-context.tsx`: SearchProvider + useSearch hook. Exposes `{ query, setQuery }`.
-   - `frontend/src/components/storefront/top-bar.tsx`: sticky 60px, brand left, search center (debounced via context), `← Admin` link right.
-   - Acceptance: typing in search updates context; TopBar re-renders only the input value.
+   - `search-context.tsx`: `SearchProvider` + `useSearch` hook returning `{ query, setQuery }`.
+   - `top-bar.tsx`: sticky 60px, brand on left (VG mark + "Visual Graphics"), search center (uses `useSearch()`), `← Admin` link to `/` on right.
 
-3. **Plan Task 9 — StorefrontShell wires data + composes TopBar + LeftRail**
-   - Replaces Task 5 stub.
-   - Loads `GET /api/suppliers` → finds VG → loads `/api/categories?supplier_id=<vg>` + `/api/products?...&limit=500` in parallel.
-   - Tallies `category_id` counts client-side, passes to `LeftRail` (Sinchana Task 8).
-   - Wraps tree in `SearchProvider`. Mobile: hide LeftRail at `< 768px`, mount MobileFilterSheet (Sinchana Task 10).
-   - Acceptance: shell renders top bar, left rail with counts, sheet FAB on mobile. No data fetches in children.
+3. **Plan Task 9 — StorefrontShell real composition**
+   - Replace Task 5 stub.
+   - Loads `GET /api/suppliers` → VG → `/api/categories?supplier_id=<vg>` + `/api/products?limit=500` in parallel.
+   - Tallies `category_id` counts client-side, passes to `<LeftRail counts={} />`.
+   - Wraps tree in `<SearchProvider>`. Mounts `<TopBar>`, `<LeftRail>` (hidden on mobile), `<MobileFilterSheet>`.
 
-4. **Plan Task 14 — PDPLayout wrapper** (`frontend/src/components/storefront/pdp-layout.tsx`)
+4. **Plan Task 14 — PDPLayout wrapper**
    - Props: `breadcrumbCategory` (`{id,name} | null`), `breadcrumbProduct`, `gallery`, `info`, `description?`, `related?`.
-   - Desktop: `grid-cols-[6fr_4fr] gap-10`. Info pane: `lg:sticky lg:top-[80px] lg:self-start`.
-   - Mobile: single column, info stacks below gallery.
-   - Acceptance: layout snaps on/off sticky correctly; description + related sections only render if provided.
+   - Desktop grid: `grid-cols-[6fr_4fr] gap-10`. Info pane `lg:sticky lg:top-[80px] lg:self-start`.
+   - Mobile: single column stacks gallery → info.
 
 5. **Plan Task 15 — ImageGallery keyboard nav**
-   - Extend `frontend/src/components/storefront/image-gallery.tsx`.
    - Add `useEffect` listener on `ArrowLeft`/`ArrowRight` to cycle hero.
-   - Wrap hero `<img>` in `<a href={active.url} target="_blank">` for zoom-in-new-tab (lightbox stub).
-   - Acceptance: key navigation works; clicking hero opens full-size image in new tab.
+   - Wrap hero in `<a href={active.url} target="_blank" rel="noopener noreferrer">` so click opens full-size in new tab.
 
-6. **Plan Task 16 — DescriptionHtml component** (`frontend/src/components/storefront/description-html.tsx`)
-   - `npm install isomorphic-dompurify` in `frontend/`.
+6. **Plan Task 16 — DescriptionHtml**
+   - `npm install isomorphic-dompurify`.
    - Sanitize whitelist: `p, br, strong, em, ul, ol, li, a, span, h1–h6`; attrs: `href, target, rel`.
-   - Prose styles via `.prose-storefront` CSS class in `globals.css` (add minimal rules per plan).
-   - Acceptance: OPS HTML descriptions render safely; raw `<script>` or `<iframe>` stripped.
+   - Add `.prose-storefront` CSS rules at bottom of `globals.css` (plan has them verbatim).
 
-7. **Plan Task 17 — RelatedProducts component** (`frontend/src/components/storefront/related-products.tsx`)
+7. **Plan Task 17 — RelatedProducts**
    - Props: `supplierId`, `categoryId`, `excludeId`.
-   - Fetch 16 from `?category_id=...` (or fallback to all VG products), filter out current, take 8.
-   - Horizontal scroller (`overflow-x-auto`), cards at 180px width.
-   - Label: "Related products" if category scoped, else "Other VG products".
-   - Acceptance: scroller renders 8 cards or fewer; current product never included.
+   - Fetch 16 from `?category_id=...` (fallback `?supplier_id=...&limit=16`), filter out current, take 8.
+   - Horizontal scroller with cards at 180px width. Label "Related products" (category scoped) or "Other VG products".
 
-8. **Plan Task 18 — Rewrite PDP page** (`frontend/src/app/storefront/vg/product/[product_id]/page.tsx`)
+8. **Plan Task 18 — Rewrite PDP page**
    - Use `PDPLayout`, `ImageGallery`, `VariantPicker`, `PriceBlock`, `DescriptionHtml`, `RelatedProducts`.
-   - Breadcrumb category: resolved via `product.category_id` → `GET /api/categories/{id}` (graceful fallback to `null` on 404).
-   - CTAs: `← Back` (router.back), `Add to quote` disabled stub with title tooltip.
-   - Acceptance: PDP renders at `/storefront/vg/product/<id>` with two-pane, sticky info on scroll, related scroller at bottom.
+   - Breadcrumb category via `product.category_id` → `GET /api/categories/{id}` (graceful 404).
+   - CTAs: `← Back` (router.back), `Add to quote` disabled stub with tooltip.
 
 ---
 
 ## Rules
 
 - Follow plan's code blocks verbatim for Tasks 7, 14, 15, 16, 17.
-- Don't tweak layout proportions — `6fr_4fr` is fixed per spec.
-- Sanitize description HTML — never raw `dangerouslySetInnerHTML` without DOMPurify.
-- Blueprint tokens only. No new colors.
+- Layout split fixed at `6fr_4fr` per spec.
+- Always sanitize HTML through DOMPurify — never raw `dangerouslySetInnerHTML`.
+- Blueprint tokens only.
 - No Co-Authored-By lines in commits.
+- One PR per task. PR title = `feat(storefront): <task name>`.
 
-## Dependencies
-
-- Task 9 blocks on Sinchana Tasks 8 (LeftRail) + 10 (MobileFilterSheet).
-- Task 18 blocks on Tasks 14, 15, 16, 17 + Urvashi Task 3 (ProductRead.category_id).
-- Task 7 (TopBar) blocks Sinchana Tasks 11 + 19 (they use useSearch).
-
-## How to test locally
+## Running locally
 
 ```bash
 docker compose up -d postgres n8n
-cd backend && source .venv/bin/activate && uvicorn main:app --port 8000
-cd frontend && npm run dev
-# /storefront/vg loads grid; click any card → PDP
+cd backend && source .venv/bin/activate && uvicorn main:app --port 8000 &
+cd frontend && npm run dev &
+# /storefront/vg → click card → PDP
 ```

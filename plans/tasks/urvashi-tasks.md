@@ -37,11 +37,15 @@ GET  /api/sync/{supplier_id}/status
 *(Full reference implementation was included in the v1 sprint plan — see the archived version of this file or the V1 plan at `plans/2026-04-16-v1-integration-pipeline.md` Task 5. Code unchanged.)*
 
 ### Steps
-- [ ] Confirm Vidhi's `resolver.py` and Tanishq's `client.py` + `normalizer.py` exist before implementing.
-- [ ] Create routes.py importing from `.client`, `.normalizer`, `.resolver`.
-- [ ] Register router in `main.py`.
-- [ ] Verify `http://localhost:8000/docs` shows the sync endpoints.
+- [x] Confirm Vidhi's `resolver.py` exists. Tanishq's `client.py` + `normalizer.py` still pending — routes drafted against expected imports (lazy-loaded inside background tasks).
+- [x] Create routes.py importing from `.client`, `.normalizer`, `.resolver`.
+- [x] Register router in `main.py`.
+- [x] Verify `http://localhost:8000/docs` shows the sync endpoints (all 4 live; `GET /status` works end-to-end against seeded SanMar).
 - [ ] Commit: `feat: sync trigger endpoints — POST /api/sync/{supplier_id}/products|inventory|pricing`
+
+**Blockers surfaced during live testing (flag to teammates):**
+- Vidhi T3 bug: `resolver.py` reads `ep["ServiceType"]` + `ep["ProductionURL"]`, but the PS directory actually returns nested `ep["Service"]["ServiceType"]["Name"]` + `ep["URL"]`. Confirmed against SanMar's live endpoint cache. Resolver needs to read the nested path.
+- Tanishq T3b/T4 still not merged — `client.py` + `normalizer.py` missing. Routes lazy-import them, so the app boots cleanly; background tasks will ImportError until these land.
 
 ---
 

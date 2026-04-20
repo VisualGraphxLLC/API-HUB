@@ -23,6 +23,7 @@ from modules.markup.routes import router as markup_router, push_router as markup
 from modules.push_log.routes import router as push_log_router
 from modules.catalog.routes import router as catalog_router
 from modules.ps_directory.routes import router as ps_router
+from modules.promostandards.routes import router as promostandards_sync_router
 from modules.sync_jobs.routes import router as sync_jobs_router
 from modules.ops_push.routes import router as ops_push_router
 
@@ -71,6 +72,7 @@ app.include_router(ps_router)
 app.include_router(catalog_router)
 app.include_router(sync_jobs_router)
 app.include_router(ops_push_router)
+app.include_router(promostandards_sync_router)
 
 
 @app.get("/health")

@@ -6,10 +6,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 
+from .engine import calculate_price
 from .models import MarkupRule
 from .schemas import MarkupRuleCreate, MarkupRuleRead
 
 router = APIRouter(prefix="/api/markup-rules", tags=["markup"])
+push_router = APIRouter(prefix="/api/push", tags=["markup"])
+
+
+@push_router.get("/{customer_id}/product/{product_id}/payload")
+async def push_payload(
+    customer_id: UUID, product_id: UUID, db: AsyncSession = Depends(get_db)
+):
+    """OPS-ready payload for a product under a customer's markup rules.
+
+    n8n calls this before invoking OPS `setProduct`/`setProductPrice` mutations.
+    """
+    return await calculate_price(db, customer_id, product_id)
 
 
 @router.get("/{customer_id}", response_model=list[MarkupRuleRead])

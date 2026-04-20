@@ -66,7 +66,7 @@ async def get_product(product_id: UUID, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Product)
         .where(Product.id == product_id)
-        .options(selectinload(Product.variants))
+        .options(selectinload(Product.variants), selectinload(Product.images))
     )
     product = result.scalar_one_or_none()
     if not product:

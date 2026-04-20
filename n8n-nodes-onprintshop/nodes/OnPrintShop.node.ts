@@ -631,11 +631,18 @@ export class OnPrintShop implements INodeType {
 				displayOptions: { show: { resource: ['mutation'] } },
 				options: [
 					{ name: 'Add Proof Version', value: 'addProofVersion', action: 'Add proof version to order product' },
+					{ name: 'Set Assign Options', value: 'setAssignOptions', action: 'Link option groups to product' },
 					{ name: 'Set Batch', value: 'setBatch', action: 'Create or update a batch' },
+					{ name: 'Set Master Option Attribute Price', value: 'setMasterOptionAttributePrice', action: 'Price per option attribute' },
+					{ name: 'Set Master Option Attributes', value: 'setMasterOptionAttributes', action: 'Define option attributes' },
 					{ name: 'Set Order Product', value: 'setOrderProduct', action: 'Update an order product' },
 					{ name: 'Set Product', value: 'setProduct', action: 'Create or update a product' },
+					{ name: 'Set Product Category', value: 'setProductCategory', action: 'Assign product to OPS category' },
 					{ name: 'Set Product Design', value: 'setProductDesign', action: 'Update product design links' },
+					{ name: 'Set Product Option Rules', value: 'setProductOptionRules', action: 'Inter-option rules' },
+					{ name: 'Set Product Pages', value: 'setProductPages', action: 'Set page count' },
 					{ name: 'Set Product Price', value: 'setProductPrice', action: 'Create or update product price' },
+					{ name: 'Set Product Size', value: 'setProductSize', action: 'Set product dimensions' },
 					{ name: 'Set Quote', value: 'setQuote', action: 'Create or update a quote' },
 					{ name: 'Update Order Product Images', value: 'updateOrderProductImages', action: 'Update order product images' },
 					{ name: 'Update Order Status', value: 'updateOrderStatus', action: 'Update order or order product status' },
@@ -753,6 +760,76 @@ export class OnPrintShop implements INodeType {
 				displayOptions: { show: { resource: ['mutation'], operation: ['setProductPrice'] } },
 				default: '{\n  "product_price_id": 0,\n  "products_id": 0,\n  "qty": 1,\n  "qty_to": 100,\n  "price": 0,\n  "vendor_price": 0,\n  "size_id": 0,\n  "visible": "1"\n}',
 				description: 'ProductPriceInput JSON object',
+			},
+			// Mutation: Set Product Category
+			{
+				displayName: 'Input (JSON)',
+				name: 'setProductCategory_input',
+				type: 'json',
+				required: true,
+				displayOptions: { show: { resource: ['mutation'], operation: ['setProductCategory'] } },
+				default: '{\n  "product_id": 0,\n  "category_id": 0\n}',
+				description: 'SetProductCategoryInput JSON object. TBD — see Postman collection',
+			},
+			// Mutation: Set Assign Options
+			{
+				displayName: 'Input (JSON)',
+				name: 'setAssignOptions_input',
+				type: 'json',
+				required: true,
+				displayOptions: { show: { resource: ['mutation'], operation: ['setAssignOptions'] } },
+				default: '{\n  "product_id": 0,\n  "option_group_ids": []\n}',
+				description: 'SetAssignOptionsInput JSON object. TBD — see Postman collection',
+			},
+			// Mutation: Set Product Size
+			{
+				displayName: 'Input (JSON)',
+				name: 'setProductSize_input',
+				type: 'json',
+				required: true,
+				displayOptions: { show: { resource: ['mutation'], operation: ['setProductSize'] } },
+				default: '{\n  "product_id": 0,\n  "width": 0,\n  "height": 0,\n  "depth": 0,\n  "weight": 0,\n  "unit": ""\n}',
+				description: 'SetProductSizeInput JSON object. TBD — see Postman collection',
+			},
+			// Mutation: Set Product Pages
+			{
+				displayName: 'Input (JSON)',
+				name: 'setProductPages_input',
+				type: 'json',
+				required: true,
+				displayOptions: { show: { resource: ['mutation'], operation: ['setProductPages'] } },
+				default: '{\n  "product_id": 0,\n  "page_count": 0\n}',
+				description: 'SetProductPagesInput JSON object. TBD — see Postman collection',
+			},
+			// Mutation: Set Master Option Attributes
+			{
+				displayName: 'Input (JSON)',
+				name: 'setMasterOptionAttributes_input',
+				type: 'json',
+				required: true,
+				displayOptions: { show: { resource: ['mutation'], operation: ['setMasterOptionAttributes'] } },
+				default: '{\n  "option_group_id": 0,\n  "attributes": []\n}',
+				description: 'SetMasterOptionAttributesInput JSON object. TBD — see Postman collection',
+			},
+			// Mutation: Set Master Option Attribute Price
+			{
+				displayName: 'Input (JSON)',
+				name: 'setMasterOptionAttributePrice_input',
+				type: 'json',
+				required: true,
+				displayOptions: { show: { resource: ['mutation'], operation: ['setMasterOptionAttributePrice'] } },
+				default: '{\n  "attribute_id": 0,\n  "price": 0\n}',
+				description: 'SetMasterOptionAttributePriceInput JSON object. TBD — see Postman collection',
+			},
+			// Mutation: Set Product Option Rules
+			{
+				displayName: 'Input (JSON)',
+				name: 'setProductOptionRules_input',
+				type: 'json',
+				required: true,
+				displayOptions: { show: { resource: ['mutation'], operation: ['setProductOptionRules'] } },
+				default: '{\n  "product_id": 0,\n  "rules": []\n}',
+				description: 'SetProductOptionRulesInput JSON object. TBD — see Postman collection',
 			},
 			// Mutation: Set Quote
 			{

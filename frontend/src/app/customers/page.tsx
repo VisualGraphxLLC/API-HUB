@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Customer } from "@/lib/types";
 
+// shadcn UI components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 function validateForm(f: FormState) {
@@ -26,24 +34,13 @@ function hostname(url: string) {
 
 function SkeletonRow() {
   return (
-    <tr style={{ borderTop: "1px solid var(--border)" }}>
+    <TableRow>
       {[160, 180, 70, 80, 90, 70].map((w, i) => (
-        <td key={i} className="px-5 py-4">
-          <div className="h-3 rounded animate-pulse" style={{ width: w, background: "var(--paper-warm)" }} />
-        </td>
+        <TableCell key={i}>
+          <div className="h-4 rounded animate-pulse bg-muted" style={{ width: w }} />
+        </TableCell>
       ))}
-    </tr>
-  );
-}
-
-function OAuth2Badge() {
-  return (
-    <span
-      className="text-xs font-semibold px-2 py-0.5 rounded"
-      style={{ background: "var(--blue-pale)", color: "var(--blue)", fontFamily: "var(--font-mono)" }}
-    >
-      OAuth2
-    </span>
+    </TableRow>
   );
 }
 
@@ -51,7 +48,7 @@ function Field({
   label, field, type = "text", placeholder, value, onChange, error,
 }: {
   label: string;
-  field: string;
+  field: keyof FormState;
   type?: string;
   placeholder?: string;
   value: string;
@@ -59,21 +56,18 @@ function Field({
   error?: string;
 }) {
   return (
-    <div>
-      <label className="text-xs mb-1 block" style={{ color: "var(--ink-muted)" }}>{label}</label>
-      <input
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+        {label}
+      </label>
+      <Input
         type={type}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 rounded-md text-sm outline-none"
-        style={{
-          border: `1px solid ${error ? "var(--red)" : "var(--border)"}`,
-          background: "var(--paper)",
-          fontFamily: type === "password" ? "var(--font-mono)" : undefined,
-        }}
+        className={`${error ? "border-red-500 focus-visible:ring-red-500" : ""} ${type === "password" ? "font-mono" : ""}`}
       />
-      {error && <p className="text-xs mt-1" style={{ color: "var(--red)" }}>{error}</p>}
+      {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
     </div>
   );
 }
@@ -151,7 +145,7 @@ export default function CustomersPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this customer?")) return;
+    if (!confirm("Delete this storefront?")) return;
     setDeleting(id);
     try {
       await api(`/api/customers/${id}`, { method: "DELETE" });
@@ -161,178 +155,142 @@ export default function CustomersPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--ink)" }}>Storefronts</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--ink-muted)" }}>OnPrintShop storefront configurations</p>
+          <h1 className="text-3xl font-bold tracking-tight">Storefronts</h1>
+          <p className="text-sm text-muted-foreground mt-1">OnPrintShop storefront configurations</p>
         </div>
         {!showAdd && (
-          <button
-            onClick={() => { setShowAdd(true); setSaveError(null); setFormErrors({}); }}
-            className="px-5 py-2.5 rounded-md text-sm font-semibold text-white"
-            style={{ backgroundColor: "#1e4d92" }}
-          >
+          <Button onClick={() => { setShowAdd(true); setSaveError(null); setFormErrors({}); }}>
             + Add Storefront
-          </button>
+          </Button>
         )}
       </div>
 
-      {/* Divider */}
-      <div className="mb-5" style={{ borderBottom: "1px solid var(--border)" }} />
+      <Separator />
 
       {/* Add form */}
       {showAdd && (
-        <div className="rounded-lg border p-6 mb-6" style={{ borderColor: "var(--border)", background: "white" }}>
-          <div className="text-xs font-semibold uppercase tracking-widest mb-5"
-            style={{ color: "var(--ink-muted)", fontFamily: "var(--font-mono)" }}>
-            New Storefront — OAuth2
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <Field label="Store Name"      field="name"             placeholder="Acme Corp"                    value={form.name}             onChange={setField("name")}             error={formErrors.name} />
-            <Field label="Storefront URL"  field="ops_base_url"     placeholder="https://acme.onprintshop.com" value={form.ops_base_url}    onChange={setField("ops_base_url")}    error={formErrors.ops_base_url} type="url" />
-            <Field label="Token URL"       field="ops_token_url"    placeholder="https://acme.onprintshop.com/oauth/token" value={form.ops_token_url}   onChange={setField("ops_token_url")}   error={formErrors.ops_token_url} type="url" />
-            <Field label="Client ID"       field="ops_client_id"    placeholder="client_id"                    value={form.ops_client_id}   onChange={setField("ops_client_id")}   error={formErrors.ops_client_id} />
-            <Field label="Client Secret"   field="ops_client_secret" placeholder="••••••••"                   value={form.ops_client_secret} onChange={setField("ops_client_secret")} error={formErrors.ops_client_secret} type="password" />
-          </div>
-
-          {saveError && (
-            <div className="text-xs mb-4 px-3 py-2 rounded"
-              style={{ background: "rgba(185,50,50,0.08)", color: "var(--red)", fontFamily: "var(--font-mono)" }}>
-              {saveError}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="text-lg">New Storefront</CardTitle>
+            <CardDescription>Connect a new OnPrintShop instance via OAuth2</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Store Name" field="name" placeholder="Acme Corp Store" value={form.name} onChange={setField("name")} error={formErrors.name} />
+              <Field label="OPS GraphQL URL" field="ops_base_url" placeholder="https://acme.onprintshop.com/graphql" value={form.ops_base_url} onChange={setField("ops_base_url")} error={formErrors.ops_base_url} type="url" />
+              <Field label="OAuth Token URL" field="ops_token_url" placeholder="https://acme.onprintshop.com/oauth/token" value={form.ops_token_url} onChange={setField("ops_token_url")} error={formErrors.ops_token_url} type="url" />
+              <Field label="Client ID" field="ops_client_id" placeholder="client_id" value={form.ops_client_id} onChange={setField("ops_client_id")} error={formErrors.ops_client_id} />
+              <Field label="Client Secret" field="ops_client_secret" placeholder="••••••••" value={form.ops_client_secret} onChange={setField("ops_client_secret")} error={formErrors.ops_client_secret} type="password" />
             </div>
-          )}
 
-          <div className="flex gap-3">
-            <button onClick={handleSave} disabled={saving}
-              className="px-5 py-2 rounded-md text-sm font-semibold text-white"
-              style={{ backgroundColor: "#1e4d92", opacity: saving ? 0.6 : 1 }}>
-              {saving ? "Saving…" : "Save Storefront"}
-            </button>
-            <button onClick={() => setShowAdd(false)} className="text-sm px-4 py-2"
-              style={{ color: "var(--ink-muted)" }}>
-              Cancel
-            </button>
-          </div>
-        </div>
+            <p className="text-xs text-muted-foreground">
+              You can find these credentials in your OnPrintShop admin panel under Settings &gt; API.
+            </p>
+
+            {saveError && (
+              <div className="text-sm text-red-500 font-medium p-3 bg-red-50 dark:bg-red-950/50 rounded-md">
+                {saveError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save Storefront"}
+              </Button>
+              <Button variant="outline" onClick={() => setShowAdd(false)}>
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Fetch error */}
       {fetchError && (
-        <div className="rounded-lg border px-4 py-3 mb-5 text-sm"
-          style={{ borderColor: "var(--red)", color: "var(--red)", background: "rgba(185,50,50,0.06)" }}>
+        <div className="text-sm text-red-500 font-medium p-4 border border-red-200 bg-red-50 rounded-lg">
           Failed to load storefronts: {fetchError}
         </div>
       )}
 
       {/* Table */}
-      <div className="rounded-lg border overflow-hidden" style={{ borderColor: "var(--border)", background: "white" }}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--border)" }}>
-              {["Name", "Storefront URL", "Auth", "Products Published", "Pricing Rules", "Status"].map((h) => (
-                <th key={h} className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-                  style={{ color: "var(--ink-muted)", fontFamily: "var(--font-mono)" }}>
-                  {h}
-                </th>
-              ))}
-              <th className="px-5 py-3" />
-            </tr>
-          </thead>
-
-          <tbody>
+      <div className="rounded-md border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Store Name</TableHead>
+              <TableHead>OPS URL</TableHead>
+              <TableHead>Auth</TableHead>
+              <TableHead>Products Published</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-[150px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading && [1, 2, 3].map((i) => <SkeletonRow key={i} />)}
 
             {!loading && customers.map((c) => (
-              <tr
-                key={c.id}
-                style={{ borderTop: "1px solid var(--border)" }}
-                className="group"
-              >
-                {/* Name */}
-                <td className="px-5 py-4 font-semibold" style={{ color: "var(--ink)" }}>
+              <TableRow key={c.id}>
+                <TableCell className="font-medium">
                   {c.name}
-                </td>
-
-                {/* OPS Base URL */}
-                <td className="px-5 py-4">
-                  <a href={c.ops_base_url} target="_blank" rel="noopener noreferrer"
-                    className="text-sm hover:underline" style={{ color: "var(--blue)" }}>
+                </TableCell>
+                <TableCell>
+                  <a href={c.ops_base_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                     {hostname(c.ops_base_url)}
                   </a>
-                </td>
-
-                {/* Auth */}
-                <td className="px-5 py-4">
-                  <OAuth2Badge />
-                </td>
-
-                {/* Products Pushed */}
-                <td className="px-5 py-4 text-sm" style={{ color: "var(--ink)", fontFamily: "var(--font-mono)" }}>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="font-mono text-xs">OAuth2</Badge>
+                </TableCell>
+                <TableCell className="font-mono">
                   {c.products_pushed.toLocaleString()}
-                </td>
-
-                {/* Markup Rules */}
-                <td className="px-5 py-4 text-sm" style={{ color: "var(--ink-muted)" }}>
-                  {c.markup_rules_count === 0
-                    ? <span style={{ color: "var(--ink-muted)" }}>—</span>
-                    : `${c.markup_rules_count} ${c.markup_rules_count === 1 ? "rule" : "rules"}`}
-                </td>
-
-                {/* Status */}
-                <td className="px-5 py-4">
+                </TableCell>
+                <TableCell>
                   {c.is_active ? (
-                    <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--green)" }}>
-                      <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "var(--green)" }} />
-                      Active
-                    </span>
+                    <Badge variant="default" className="bg-green-600 hover:bg-green-700">Active</Badge>
                   ) : (
-                    <span className="text-sm" style={{ color: "var(--ink-muted)" }}>Inactive</span>
+                    <Badge variant="secondary">Inactive</Badge>
                   )}
-                </td>
-
-                {/* Actions */}
-                <td className="px-5 py-4">
-                  <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity items-center">
-                    <button
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="ghost" 
+                      size="sm"
                       onClick={() => handleToggle(c)}
                       disabled={toggling === c.id}
-                      className="text-xs"
-                      style={{ color: "var(--blue)", opacity: toggling === c.id ? 0.5 : 1 }}
+                      className={c.is_active ? "text-muted-foreground" : "text-blue-600"}
                     >
                       {toggling === c.id ? "…" : c.is_active ? "Deactivate" : "Activate"}
-                    </button>
-                    <span style={{ color: "var(--border)" }}>·</span>
-                    <button
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDelete(c.id)}
                       disabled={deleting === c.id}
-                      className="text-xs"
-                      style={{ color: "var(--red)", opacity: deleting === c.id ? 0.5 : 1 }}
+                      className="text-destructive hover:text-destructive"
                     >
                       {deleting === c.id ? "…" : "Delete"}
-                    </button>
+                    </Button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
 
             {!loading && customers.length === 0 && !fetchError && (
-              <tr>
-                <td colSpan={7} className="px-5 py-16 text-center">
-                  <div className="text-3xl mb-3">🏪</div>
-                  <div className="text-sm font-semibold mb-1" style={{ color: "var(--ink)" }}>
-                    No storefronts configured
-                  </div>
-                  <div className="text-xs" style={{ color: "var(--ink-muted)" }}>
-                    Add an OnPrintShop storefront to start publishing products.
-                  </div>
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={6} className="h-32 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No storefronts added. Add your OnPrintShop storefront to start publishing products.
+                  </p>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

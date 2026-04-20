@@ -1,6 +1,6 @@
 # Vidhi — Sprint Tasks
 
-**Status:** 4/6 tasks shipped. Tasks 14, 15 remaining.
+**Status:** 5/6 tasks shipped. Task 15 remaining.
 **Branch:** `Vidhi` — all completed work pushed to remote
 
 ---
@@ -11,6 +11,7 @@
 - **Task 0.5** — Workflows page with animated pipeline visualizer (`frontend/src/components/workflows/pipeline-view.tsx`) — commit `8985dc6`
 - **Task 3** — WSDL Resolver (`backend/modules/promostandards/resolver.py`) — commit `4b18c15` — all 9 tests passed
 - **Task 13** — OPS Image Pipeline (`backend/modules/ops_push/image_pipeline.py` + `routes.py`) — commit `ce9837d` — E2E tested: download → resize 800×800 → WebP q85 → served at `GET /api/push/image/{image_id}/processed`
+- **Task 14** — 4Over REST + HMAC Client (`backend/modules/rest_connector/fourover_client.py`) — all 9 unit tests passed (signature format + MockTransport request verification). E2E against real 4Over sandbox blocked on Christian's credentials.
 
 ---
 
@@ -142,7 +143,7 @@ Verified: `file` output → `RIFF (little-endian) data, Web/P image, VP8 encodin
 
 ---
 
-### Task 14: 4Over REST + HMAC Client
+### Task 14: 4Over REST + HMAC Client *(✅ COMPLETED)*
 
 **Priority:** After Task 3. Blocked on Christian providing 4Over sandbox credentials for E2E — but the client code can be written and unit-tested independently against sample fixtures.
 **File to create:** `backend/modules/rest_connector/fourover_client.py`
@@ -181,10 +182,10 @@ class FourOverClient:
 ```
 
 ### Steps
-- [ ] **Step 1:** Create `rest_connector/__init__.py` if it doesn't exist (Urvashi may already have).
-- [ ] **Step 2:** Implement the class + 4 methods using httpx `AsyncClient`.
-- [ ] **Step 3:** Write a pytest with a mocked httpx transport to verify the signature header format against a known input/output fixture.
-- [ ] **Step 4:** Commit: `feat: 4Over REST+HMAC client with SHA-256 request signing`
+- [x] **Step 1:** Created `rest_connector/__init__.py` (directory didn't exist yet — Urvashi hadn't started Task 8).
+- [x] **Step 2:** Implemented the class + 4 methods using httpx `AsyncClient`. Added input validation in the constructor, an injectable `timestamp` parameter on `_sign()` for deterministic testing, and an optional `http_client` parameter on every method so tests can pass a `MockTransport`-backed client.
+- [x] **Step 3:** Wrote `backend/test_fourover_client.py` with 9 tests covering: known-vector HMAC-SHA256 signature check, determinism, method/path sensitivity, constructor validation, trailing-slash stripping, signed request via `httpx.MockTransport`, UUID embedded in options path, POST body for quote, and 401 error propagation. All 9 pass.
+- [x] **Step 4:** Commit: `feat: 4Over REST+HMAC client with SHA-256 request signing`
 
 ---
 

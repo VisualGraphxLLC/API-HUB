@@ -55,7 +55,8 @@ def apply_markup(base_price: Optional[Decimal], rule: Optional[Any]) -> Optional
     if rule is None:
         return Decimal(base_price).quantize(CENT, rounding=ROUND_HALF_UP)
 
-    base = Decimal(base_price)
+    # str() coercion keeps float→Decimal round-trips exact (avoids Decimal(0.1))
+    base = Decimal(str(base_price))
     markup_pct = Decimal(str(rule.markup_pct))
     price = base * (Decimal("1") + markup_pct / HUNDRED)
 
@@ -93,6 +94,8 @@ async def calculate_price(
     customer = await db.get(Customer, customer_id)
     if not customer:
         raise HTTPException(404, "Customer not found")
+    if not customer.is_active:
+        raise HTTPException(409, f"Customer '{customer.name}' is not active")
 
     rules = (
         await db.execute(

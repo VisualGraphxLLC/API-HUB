@@ -8,13 +8,16 @@ from database import get_db
 
 from .engine import calculate_price
 from .models import MarkupRule
-from .schemas import MarkupRuleCreate, MarkupRuleRead
+from .schemas import MarkupRuleCreate, MarkupRuleRead, PushPayload
 
 router = APIRouter(prefix="/api/markup-rules", tags=["markup"])
 push_router = APIRouter(prefix="/api/push", tags=["markup"])
 
 
-@push_router.get("/{customer_id}/product/{product_id}/payload")
+@push_router.get(
+    "/{customer_id}/product/{product_id}/payload",
+    response_model=PushPayload,
+)
 async def push_payload(
     customer_id: UUID, product_id: UUID, db: AsyncSession = Depends(get_db)
 ):

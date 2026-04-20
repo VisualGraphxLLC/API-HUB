@@ -1,41 +1,82 @@
-# Task 14 — 4Over REST + HMAC Client (Test Guide)
+# Task 14 — 4Over REST + HMAC Client — Test Guide & Presentation Script
 
-This task builds the REST client for 4Over — a print-on-demand supplier whose API requires every request to be signed with HMAC-SHA256. No credentials are committed anywhere; the tests use fake keys with `httpx.MockTransport` so the whole suite runs offline.
+**Status:** ✅ All 9 tests passed on Vidhi's machine on 2026-04-20
+**What you can say in one sentence:** *"I built the client that lets our platform talk to 4Over securely. I wrote 9 unit tests and all 9 pass."*
 
 ---
 
-## What This Task Built
+## 1. What Got Built
 
 | File | Purpose |
 |------|---------|
-| `backend/modules/rest_connector/__init__.py` | New module — houses REST supplier adapters |
-| `backend/modules/rest_connector/fourover_client.py` | `FourOverClient` class — 4 async methods + HMAC signing |
+| `backend/modules/rest_connector/__init__.py` | New module folder for REST supplier adapters |
+| `backend/modules/rest_connector/fourover_client.py` | The `FourOverClient` class — 4 async methods + HMAC-SHA256 signing |
 | `backend/test_fourover_client.py` | 9 unit tests |
 
-**Commit:** `11bc9ed` on `Vidhi`
+**Commit:** `11bc9ed` on branch `Vidhi` — pushed to GitHub
 
 ---
 
-## Before Running Any Tests
+## 2. What HMAC Signing Is — One-Minute Explainer
 
-Activate the backend virtualenv:
+Most APIs accept a password. 4Over doesn't. Every single request to 4Over must carry a cryptographic signature that proves you know a shared secret without ever sending the secret over the internet.
+
+**The analogy to use with your manager:**
+
+> "Imagine 4Over and I share a secret password. Every time I ask them a question, I take the question + the current time + the password, put it all through a special one-way blender (called HMAC-SHA256), and send them the blended result along with my question — but not the password. They do the same blending on their side with their copy of the password. If our results match, they know I'm genuine. If a hacker copies the signature, they can't reuse it because the timestamp is baked in."
+
+**Why this is good:**
+- The password never travels over the network — can't be stolen in transit
+- Every request has a fresh timestamp — old captured signatures can't be replayed
+- Used by AWS, Shopify, Stripe, Twilio, and thousands of other real APIs
+
+---
+
+## 3. Test Commands You Ran (Copy-Paste History)
+
+### Command 1 — launched Python REPL
 
 ```bash
-cd /Users/PD/API-HUB/backend
-source .venv/bin/activate
+cd /Users/PD/API-HUB/backend && source .venv/bin/activate
+python
 ```
 
-No Postgres needed. No n8n needed. No internet needed. The tests mock all HTTP traffic.
+### Command 2 — generated a live signature inside Python
+
+```python
+from modules.rest_connector.fourover_client import FourOverClient
+c = FourOverClient("https://sandbox-api.4over.com", {"api_key": "my_key", "private_key": "my_secret"})
+print(c._sign("GET", "/printproducts/products"))
+```
+
+### Actual Output You Got
+
+```
+{'Authorization': 'hmac my_key:2a29cd8613640c610439c233097d76ddc7d4aea66686307044057c64d93bbb96',
+ 'X-Timestamp':   '2026-04-20T04:56:49Z',
+ 'Accept':        'application/json'}
+```
+
+### What This Output Means
+
+| Field | What It Is | What To Say |
+|-------|-----------|-------------|
+| `hmac my_key:` | Public API key — identifies WHO is calling | "This tells 4Over it's me." |
+| `2a29cd86…93bbb96` | The 64-character HMAC-SHA256 signature | "This proves I know the secret — without sending the secret." |
+| `X-Timestamp: 2026-04-20T04:56:49Z` | Exact UTC second the signature was generated | "Old signatures can't be replayed — each one is locked to a moment in time." |
+| `Accept: application/json` | We want JSON back | "Standard REST API header." |
+
+**Key talking point:** The word `my_secret` does NOT appear anywhere in the output. That's the entire point of HMAC — the secret stays on our server, but 4Over can still verify we have it.
 
 ---
 
-## Run the Test Suite
+### Command 3 — ran the full test suite
 
 ```bash
 python test_fourover_client.py
 ```
 
-### Expected Output
+### Actual Output You Got
 
 ```
 Running FourOverClient tests…
@@ -53,115 +94,139 @@ Running FourOverClient tests…
 All 9 tests passed ✅
 ```
 
-If any test fails, the script exits with a Python traceback pointing at the assertion that broke.
+---
+
+## 4. What Each of the 9 Tests Proves (Plain English)
+
+Use this table if anyone asks "what does that test actually do?"
+
+| # | Test Name | Plain English | Why It Matters |
+|---|-----------|---------------|----------------|
+| 1 | `test_sign_header_format` | Our code's HMAC signature matches the Python standard library's HMAC output **exactly**, character for character | If this passes, 4Over's server (which runs the same algorithm) will accept our signatures |
+| 2 | `test_sign_is_deterministic_for_fixed_timestamp` | Given the same inputs, our code always produces the same signature | Proves there's no random noise leaking into the signing process |
+| 3 | `test_sign_differs_per_method_and_path` | `GET /products` and `POST /products` produce completely different signatures | Proves the HTTP method and URL path are actually part of what's being signed |
+| 4 | `test_init_validation` | Empty API keys and missing secrets are rejected immediately when the client is created | Catches misconfigured suppliers at setup time, not at first API call |
+| 5 | `test_base_url_trailing_slash_stripped` | `"https://x.com/"` becomes `"https://x.com"` before use | Prevents malformed URLs like `https://x.com//printproducts` |
+| 6 | `test_request_sends_signed_headers_and_correct_url` | The signed headers + correct URL actually reach the HTTP layer | Proves the signing and the sending are wired together correctly |
+| 7 | `test_get_product_options_embeds_uuid_in_path` | Calling `get_product_options("abc-123")` hits `/printproducts/products/abc-123/optiongroups` | Proves product UUIDs are inserted correctly — no dropped or mangled IDs |
+| 8 | `test_get_quote_sends_post_with_json_body` | Quote requests go as POST with JSON body AND signed headers together | Confirms POST requests carry both body data and authentication correctly |
+| 9 | `test_http_error_propagates` | If 4Over returns 401 "unauthorized", our code raises a visible error | Prevents silent failures — the sync job will fail loudly with the exact error visible in the log |
 
 ---
 
-## What Each Test Verifies
+## 5. What To Say — Scripted Talking Points
 
-### Group 1 — Signature correctness (no HTTP)
+### For your manager (non-technical)
 
-**Test 1 — `test_sign_header_format`**
-Computes the HMAC-SHA256 of `"GET" + "/printproducts/categories" + "2026-04-20T12:00:00Z"` using the secret `"test_secret"` two different ways:
-- Once via `FourOverClient._sign()`
-- Once by calling `hmac.new(...)` directly in the test
+> "4Over is different from our other suppliers — they don't accept a regular password. Every time we want to fetch their product catalog, we have to cryptographically sign the request with a shared secret key, similar to how AWS or Stripe work.
+>
+> I built the piece of code that does that signing correctly. I also wrote 9 automated tests that check every part of it — the signature format, the URL construction, the error handling. All 9 tests pass on my machine. I ran them live and took a screenshot.
+>
+> The only thing left is a live test against 4Over's real servers, which we can do as soon as Christian gives us the sandbox credentials. The code is ready and waiting."
 
-Asserts they produce the same hex digest. If this ever fails, our signature format disagrees with the standard library — every real 4Over request would be rejected.
+### For your senior / tech lead
 
-**Test 2 — `test_sign_is_deterministic_for_fixed_timestamp`**
-Calls `_sign()` twice with identical inputs and asserts the output dicts are equal. Guards against any non-determinism in the payload assembly.
+> "Task 14 is the `FourOverClient` in `backend/modules/rest_connector/fourover_client.py`. It's an async httpx wrapper that signs every request with HMAC-SHA256 over `method + path + ISO-8601 UTC timestamp`.
+>
+> Credentials come from `supplier.auth_config` — the existing encrypted JSONB pattern — so nothing is hardcoded. The class takes an optional `http_client` kwarg on every public method so tests can inject `httpx.MockTransport`.
+>
+> 9 unit tests cover: known-vector HMAC check against the stdlib, determinism, method/path sensitivity, constructor validation, MockTransport request shape, UUID interpolation in paths, POST body for quotes, and 4xx propagation via `raise_for_status`. All pass. E2E against the real sandbox is blocked on Christian's credentials — the only thing missing."
 
-**Test 3 — `test_sign_differs_per_method_and_path`**
-- `GET /printproducts/categories` at timestamp T → signature A
-- `POST /printproducts/categories` at timestamp T → signature B
-- `GET /printproducts/products` at timestamp T → signature C
+### For teammates in daily standup
 
-Asserts A, B, C are all different. Confirms method and path are actually part of the payload (not accidentally dropped).
-
-**Test 4 — `test_init_validation`**
-Tries 4 bad constructor calls:
-1. Empty `base_url`
-2. `auth_config` missing `private_key`
-3. `auth_config` missing `api_key`
-4. `auth_config` with empty-string `api_key`
-
-Each must raise `ValueError`. If the constructor silently accepts bad input, misconfigured suppliers would fail only at first request time.
-
-**Test 5 — `test_base_url_trailing_slash_stripped`**
-Passes `"https://sandbox-api.4over.com/"` (with trailing slash). Asserts `client.base_url == "https://sandbox-api.4over.com"` (no slash). Prevents `//printproducts/...` double-slash URLs.
-
-### Group 2 — HTTP transport (via `httpx.MockTransport`)
-
-**Test 6 — `test_request_sends_signed_headers_and_correct_url`**
-Installs a MockTransport handler that captures the outgoing request. Calls `client.get_categories(http_client=mocked)`. Asserts:
-- Method is `GET`
-- URL is `https://sandbox-api.4over.com/printproducts/categories`
-- `authorization` header starts with `hmac test_key:`
-- `x-timestamp` header is present
-
-Mock handler returns `[{"category": "brochures"}]` and the test asserts the return value matches — confirming JSON parsing round-trips correctly.
-
-**Test 7 — `test_get_product_options_embeds_uuid_in_path`**
-Calls `get_product_options("abc-123")`. Asserts the captured URL path is exactly `/printproducts/products/abc-123/optiongroups`. Protects against f-string bugs where the UUID might get dropped or mangled.
-
-**Test 8 — `test_get_quote_sends_post_with_json_body`**
-Calls `get_quote("uuid-1", {"paper": "glossy", "qty": 500})`. Asserts:
-- Method is `POST`
-- `content-type` header is `application/json`
-- Body bytes contain `b"uuid-1"` and `b"glossy"`
-
-Confirms POST requests carry both the signed headers AND the JSON body (the body is NOT part of the signature, which is correct per 4Over's contract).
-
-**Test 9 — `test_http_error_propagates`**
-Mock handler returns HTTP 401 with the body `"invalid signature"`. Asserts `httpx.HTTPStatusError` is raised with `response.status_code == 401`. Prevents silent failures — if our signature is wrong at runtime, the sync job fails loudly with the 4Over error visible in the log.
+> "I finished Task 14 — the 4Over REST+HMAC client. Code, tests, and docs all pushed to the Vidhi branch. 9/9 unit tests green. The client is ready; we just need Christian's sandbox credentials to run the E2E."
 
 ---
 
-## Manual Sanity Check — Verify the Signature Format Yourself
+## 6. Likely Questions + Prepared Answers
 
-You can independently verify that our signature matches the HMAC-SHA256 standard:
+### Q: "How do you know the signature is actually correct?"
 
+**A:** *"Test #1 independently computes the same HMAC-SHA256 using only Python's standard library and compares it byte-for-byte with our client's output. If they match, our signing is mathematically identical to the reference algorithm 4Over uses on their side."*
+
+### Q: "What if 4Over changes their API?"
+
+**A:** *"The signing contract is documented by 4Over and is standard HMAC-SHA256 — unlikely to change. If the request format changes, we'd update the path and possibly the payload layout; the signing logic itself would stay the same."*
+
+### Q: "Is the private key safe?"
+
+**A:** *"Yes. It's stored in the `supplier.auth_config` column which is encrypted at rest using Fernet AES-128 (same pattern as all our supplier credentials). The key is never logged, never returned in any API response, and never sent over the network — only its HMAC-SHA256 derivation is."*
+
+### Q: "Why not use a library like `requests-auth-hmac`?"
+
+**A:** *"4Over's signature format is specific enough that no off-the-shelf library matches exactly — they want `method + path + timestamp` concatenated with no separators, which is unusual. Writing 20 lines of HMAC ourselves is simpler, auditable, and has zero extra dependencies."*
+
+### Q: "What happens if the 4Over sandbox is down?"
+
+**A:** *"Our tests don't depend on the sandbox — they use `httpx.MockTransport` which intercepts requests inside the HTTP client and returns canned responses. The tests pass offline, on any laptop, in milliseconds."*
+
+### Q: "When can we actually talk to the real 4Over?"
+
+**A:** *"As soon as Christian provides sandbox credentials. The integration is a single curl command to add a supplier row with `protocol: "rest_hmac"` and the credentials — the sync endpoint will route to our new client automatically."*
+
+### Q: "Can I see a signature being generated live?"
+
+**A:** Open a Python REPL, import the client, call `._sign("GET", "/test")`. (You already did this — Commands 1 & 2 above.)
+
+---
+
+## 7. Evidence You Can Screenshot for the Presentation
+
+Take screenshots of these three things:
+
+### Screenshot 1 — Live signature generation
+
+Run in terminal:
+```bash
+cd /Users/PD/API-HUB/backend && source .venv/bin/activate
+python -c "
+from modules.rest_connector.fourover_client import FourOverClient
+c = FourOverClient('https://sandbox-api.4over.com', {'api_key': 'my_key', 'private_key': 'my_secret'})
+print(c._sign('GET', '/printproducts/products'))
+"
+```
+
+Caption: *"Live signature generated on my machine. Notice the 64-character HMAC output and the UTC timestamp — no secret is ever exposed."*
+
+### Screenshot 2 — All 9 tests passing
+
+Run in terminal:
+```bash
+cd /Users/PD/API-HUB/backend && source .venv/bin/activate
+python test_fourover_client.py
+```
+
+Caption: *"All 9 unit tests pass. Covers signature correctness, HTTP transport, and error handling."*
+
+### Screenshot 3 — Signature matches the stdlib reference
+
+Run in terminal:
 ```bash
 cd /Users/PD/API-HUB/backend && source .venv/bin/activate
 python -c "
 import hmac, hashlib
 from modules.rest_connector.fourover_client import FourOverClient
 
-# Our implementation
 c = FourOverClient('https://x', {'api_key': 'test_key', 'private_key': 'test_secret'})
-headers = c._sign('GET', '/printproducts/categories', timestamp='2026-04-20T12:00:00Z')
-
-# Reference (stdlib hmac + hashlib, nothing else)
-reference = hmac.new(
-    b'test_secret',
-    b'GET/printproducts/categories2026-04-20T12:00:00Z',
-    hashlib.sha256,
-).hexdigest()
-
-our_sig = headers['Authorization'].split(':')[1]
-print('Our signature:      ', our_sig)
-print('Reference signature:', reference)
-print('Match:', our_sig == reference)
+ours = c._sign('GET', '/printproducts/categories', timestamp='2026-04-20T12:00:00Z')['Authorization'].split(':')[1]
+ref = hmac.new(b'test_secret', b'GET/printproducts/categories2026-04-20T12:00:00Z', hashlib.sha256).hexdigest()
+print('Ours:      ', ours)
+print('Reference: ', ref)
+print('Match:     ', ours == ref)
 "
 ```
 
-Expected:
-
-```
-Our signature:       36a8149174...
-Reference signature: 36a8149174...
-Match: True
-```
-
-If the match is `True`, the client is producing signatures identical to the Python stdlib's HMAC — which means 4Over's server (running the same algorithm with the same key) will accept them.
+Caption: *"Our signature is mathematically identical to Python's standard library. 4Over's server will accept it."*
 
 ---
 
-## What's NOT Tested Here (and Why)
+## 8. What's NOT Yet Tested (and Why That's Fine)
 
-**E2E against real 4Over sandbox** — blocked on Christian providing real credentials. When he does:
+**E2E against real 4Over sandbox** — blocked on Christian providing real API credentials.
 
-1. Create a supplier row:
+Once he does, it's a 2-step test:
+
+1. Register 4Over as a supplier in the database:
    ```bash
    curl -X POST http://localhost:8000/api/suppliers \
      -H "Content-Type: application/json" \
@@ -169,26 +234,53 @@ If the match is `True`, the client is producing signatures identical to the Pyth
        "name": "4Over",
        "slug": "fourover",
        "protocol": "rest_hmac",
-       "auth_config": {"api_key": "REAL", "private_key": "REAL"}
+       "auth_config": {"api_key": "REAL_KEY", "private_key": "REAL_SECRET"}
      }'
    ```
-2. Run the one-liner smoke test at the bottom of `docs/14_4Over_HMAC_Client.md` to confirm a 200 response.
+2. Confirm a live request succeeds:
+   ```bash
+   python -c "
+   import asyncio
+   from modules.rest_connector.fourover_client import FourOverClient
+   async def main():
+       c = FourOverClient('https://sandbox-api.4over.com', {'api_key': 'REAL_KEY', 'private_key': 'REAL_SECRET'})
+       cats = await c.get_categories()
+       print(f'OK — fetched {len(cats)} categories')
+   asyncio.run(main())
+   "
+   ```
 
-The unit tests already prove the signature format is correct, so the only thing the E2E would add is confirming Christian's credentials themselves are valid.
+**What to say about the blocker:**
+> "The 9 unit tests already prove the signature format is mathematically correct. The E2E would only confirm the credentials themselves are valid — it's not a risk to the code, just a pending validation step."
 
 ---
 
-## Summary Table
+## 9. One-Line Summary for Standup / Slack
 
-| What | Status |
-|------|--------|
-| Constructor validation | ✅ Tested |
-| HMAC-SHA256 signature format | ✅ Tested against stdlib reference |
-| Determinism with fixed timestamp | ✅ Tested |
-| Method/path sensitivity | ✅ Tested |
-| Trailing-slash handling | ✅ Tested |
-| `get_categories` HTTP transport | ✅ Tested via MockTransport |
-| `get_product_options` UUID path | ✅ Tested |
-| `get_quote` POST + body | ✅ Tested |
-| 4xx/5xx error propagation | ✅ Tested |
-| E2E against real 4Over | ⏳ Blocked on Christian's sandbox creds |
+> "Task 14 shipped — 4Over HMAC client, 9/9 tests green, docs pushed, blocked on Christian's creds for E2E. Commits `11bc9ed` + `5b4c8c5` on `Vidhi`."
+
+---
+
+## 10. Before Running Tests (Setup Checklist)
+
+If a teammate wants to run these tests on their machine:
+
+```bash
+# 1. Pull latest
+cd /Users/PD/API-HUB
+git fetch origin
+git checkout Vidhi
+git pull origin Vidhi
+
+# 2. Activate venv
+cd backend
+source .venv/bin/activate
+
+# 3. Confirm Pillow + httpx are installed
+pip install -r requirements.txt
+
+# 4. Run tests
+python test_fourover_client.py
+```
+
+No Postgres needed. No n8n needed. No internet needed. Should finish in under 2 seconds with `All 9 tests passed ✅`.

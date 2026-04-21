@@ -769,7 +769,7 @@ export class OnPrintShop implements INodeType {
 				required: true,
 				displayOptions: { show: { resource: ['mutation'], operation: ['setProductCategory'] } },
 				default: '{\n  "product_id": 0,\n  "category_id": 0\n}',
-				description: 'SetProductCategoryInput JSON object. TBD — see Postman collection',
+				description: 'Connects a product to a specific OnPrintShop category. Requires valid product and category IDs.',
 			},
 			// Mutation: Set Assign Options
 			{
@@ -779,7 +779,7 @@ export class OnPrintShop implements INodeType {
 				required: true,
 				displayOptions: { show: { resource: ['mutation'], operation: ['setAssignOptions'] } },
 				default: '{\n  "product_id": 0,\n  "option_group_ids": []\n}',
-				description: 'SetAssignOptionsInput JSON object. TBD — see Postman collection',
+				description: 'Assigns one or more master option groups to a product. Input requires an array of group IDs.',
 			},
 			// Mutation: Set Product Size
 			{
@@ -788,8 +788,8 @@ export class OnPrintShop implements INodeType {
 				type: 'json',
 				required: true,
 				displayOptions: { show: { resource: ['mutation'], operation: ['setProductSize'] } },
-				default: '{\n  "product_id": 0,\n  "width": 0,\n  "height": 0,\n  "depth": 0,\n  "weight": 0,\n  "unit": ""\n}',
-				description: 'SetProductSizeInput JSON object. TBD — see Postman collection',
+				default: '{\n  "product_id": 0,\n  "width": 0,\n  "height": 0,\n  "depth": 0,\n  "weight": 0,\n  "unit": "inch"\n}',
+				description: 'Sets physical dimensions for a product. Depth and Weight are optional but recommended.',
 			},
 			// Mutation: Set Product Pages
 			{
@@ -799,7 +799,7 @@ export class OnPrintShop implements INodeType {
 				required: true,
 				displayOptions: { show: { resource: ['mutation'], operation: ['setProductPages'] } },
 				default: '{\n  "product_id": 0,\n  "page_count": 0\n}',
-				description: 'SetProductPagesInput JSON object. TBD — see Postman collection',
+				description: 'Defines the available page count or sheet count for a variable multi-page product.',
 			},
 			// Mutation: Set Master Option Attributes
 			{
@@ -809,7 +809,7 @@ export class OnPrintShop implements INodeType {
 				required: true,
 				displayOptions: { show: { resource: ['mutation'], operation: ['setMasterOptionAttributes'] } },
 				default: '{\n  "option_group_id": 0,\n  "attributes": []\n}',
-				description: 'SetMasterOptionAttributesInput JSON object. TBD — see Postman collection',
+				description: 'Bulk defines attribute values (colors, sizes, etc) for a master option group.',
 			},
 			// Mutation: Set Master Option Attribute Price
 			{
@@ -819,7 +819,7 @@ export class OnPrintShop implements INodeType {
 				required: true,
 				displayOptions: { show: { resource: ['mutation'], operation: ['setMasterOptionAttributePrice'] } },
 				default: '{\n  "attribute_id": 0,\n  "price": 0\n}',
-				description: 'SetMasterOptionAttributePriceInput JSON object. TBD — see Postman collection',
+				description: 'Updates the price adjustment value for a specific option attribute record.',
 			},
 			// Mutation: Set Product Option Rules
 			{
@@ -829,7 +829,7 @@ export class OnPrintShop implements INodeType {
 				required: true,
 				displayOptions: { show: { resource: ['mutation'], operation: ['setProductOptionRules'] } },
 				default: '{\n  "product_id": 0,\n  "rules": []\n}',
-				description: 'SetProductOptionRulesInput JSON object. TBD — see Postman collection',
+				description: 'Configures conditional logic between options (e.g. If Color=Red, hide Size=XXL).',
 			},
 			// Mutation: Set Quote
 			{

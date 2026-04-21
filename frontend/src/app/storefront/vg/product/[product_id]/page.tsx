@@ -8,6 +8,7 @@ import type { Category, Product } from "@/lib/types";
 import { ImageGallery } from "@/components/storefront/image-gallery";
 import { VariantPicker } from "@/components/storefront/variant-picker";
 import { PriceBlock } from "@/components/storefront/price-block";
+import { DescriptionHtml } from "@/components/storefront/description-html";
 
 export default function VGProductDetailPage() {
   const params = useParams<{ product_id: string }>();
@@ -147,12 +148,7 @@ export default function VGProductDetailPage() {
 
           {product.description && (
             <div className="py-5 border-t border-dashed border-[#cfccc8]">
-              <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#484852] mb-2">
-                Description
-              </div>
-              <p className="text-[14px] leading-[1.6] text-[#1e1e24] whitespace-pre-line">
-                {product.description}
-              </p>
+              <DescriptionHtml html={product.description} />
             </div>
           )}
 

@@ -1,34 +1,43 @@
 "use client";
 
-import React from "react";
-
 export type NodeStatus = "idle" | "running" | "done" | "error";
 export type NodeIcon = "supplier" | "fetch" | "normalize" | "store" | "publish";
 
+export interface PipelineNode {
+  id: string;
+  label: string;
+  sublabel: string;
+  status: NodeStatus;
+  icon?: NodeIcon;
+  /** e.g. "1m 42s" — shown when status is done or error */
+  duration?: string;
+}
+
 const STATUS_COLOR: Record<NodeStatus, string> = {
-  idle: "var(--ink-faint)",
+  idle:    "var(--blue)",
   running: "var(--blue)",
-  done: "var(--green)",
-  error: "var(--red)",
+  done:    "var(--green)",
+  error:   "var(--red)",
 };
 
 const STATUS_BG: Record<NodeStatus, string> = {
-  idle: "var(--vellum)",
+  idle:    "var(--paper-warm)",
   running: "var(--blue-pale)",
-  done: "var(--green-pale)",
-  error: "var(--red-pale)",
+  done:    "rgba(36,122,82,0.08)",
+  error:   "rgba(185,50,50,0.08)",
 };
 
 const STATUS_LABEL: Record<NodeStatus, string> = {
-  idle: "idle",
+  idle:    "idle",
   running: "running",
-  done: "done",
-  error: "error",
+  done:    "done",
+  error:   "error",
 };
 
 // ─── SVG icons matching Blueprint theme ──────────────────────────────────────
 
 function IconSupplier({ color }: { color: string }) {
+  // Truck — wholesale supplier delivering products
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <rect x="1" y="3" width="15" height="13" rx="1"/>
@@ -40,6 +49,7 @@ function IconSupplier({ color }: { color: string }) {
 }
 
 function IconFetch({ color }: { color: string }) {
+  // Download arrow — pulling data from API
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -50,6 +60,7 @@ function IconFetch({ color }: { color: string }) {
 }
 
 function IconNormalize({ color }: { color: string }) {
+  // Funnel — raw data in, clean standard data out
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
@@ -115,6 +126,13 @@ function Connector({ leftStatus }: ConnectorProps) {
           />
         )}
       </div>
+      <div
+        className="text-[10px] ml-0.5 shrink-0"
+        style={{ color: isActive ? "var(--blue)" : "var(--border)" }}
+      >
+        ▶
+      </div>
+
       <style>{`
         @keyframes travel {
           0%   { left: 0%; }
@@ -135,35 +153,31 @@ function Connector({ leftStatus }: ConnectorProps) {
 
 // ─── PipelineView ─────────────────────────────────────────────────────────────
 
-export interface PipelineNode {
-  id: string;
-  label: string;
-  sublabel: string;
-  status: NodeStatus;
-  icon?: NodeIcon;
-  duration?: string;
-}
-
 interface Props {
   nodes: PipelineNode[];
 }
 
 export default function PipelineView({ nodes }: Props) {
   return (
-    <div className="flex items-center overflow-x-auto py-6 px-2 justify-center">
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-evenly", padding: "28px 24px", overflowX: "auto" }}>
       {nodes.map((node, i) => (
-        <div key={node.id} className="flex items-center shrink-0">
+        <div key={node.id} style={{ display: "flex", alignItems: "center", flex: 1 }}>
           <div
-            className="rounded-xl border px-5 py-4 min-w-[148px] text-center transition-all duration-300"
             style={{
-              borderColor: STATUS_COLOR[node.status],
-              background: STATUS_BG[node.status],
-              boxShadow:
-                node.status === "running"
-                  ? `0 0 16px ${STATUS_COLOR[node.status]}30`
-                  : node.status === "error"
-                  ? `0 0 8px ${STATUS_COLOR[node.status]}20`
-                  : "none",
+              flex: 1,
+              borderRadius: 12,
+              border: `1.5px solid ${node.status === "idle" ? "var(--border)" : STATUS_COLOR[node.status]}`,
+              background: node.status === "idle" ? "var(--vellum)" : STATUS_BG[node.status],
+              padding: "20px 16px",
+              textAlign: "center",
+              transition: "all 0.3s",
+              boxShadow: node.status === "idle"
+                ? "4px 6px 0 var(--shadow)"
+                : node.status === "running"
+                ? `0 0 16px ${STATUS_COLOR[node.status]}30`
+                : node.status === "error"
+                ? `0 0 8px ${STATUS_COLOR[node.status]}20`
+                : "4px 6px 0 var(--shadow)",
             }}
           >
             {/* Icon */}
@@ -231,7 +245,11 @@ export default function PipelineView({ nodes }: Props) {
             </div>
           </div>
 
-          {i < nodes.length - 1 && <Connector leftStatus={node.status} />}
+          {i < nodes.length - 1 && (
+            <div style={{ flexShrink: 0, width: 48 }}>
+              <Connector leftStatus={node.status} />
+            </div>
+          )}
         </div>
       ))}
     </div>

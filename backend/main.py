@@ -22,8 +22,11 @@ from modules.suppliers.routes import router as suppliers_router
 from modules.customers.routes import router as customers_router
 from modules.markup.routes import router as markup_router, push_router as markup_push_router
 from modules.push_log.routes import router as push_log_router
-from modules.catalog.routes import router as catalog_router
+from modules.catalog.routes import router as catalog_router, categories_router
+from modules.catalog.ingest import router as catalog_ingest_router
+from modules.n8n_proxy.routes import router as n8n_proxy_router
 from modules.ps_directory.routes import router as ps_router
+from modules.promostandards.routes import router as promostandards_sync_router
 from modules.sync_jobs.routes import router as sync_jobs_router
 from modules.ops_config.routes import router as ops_config_router
 from modules.ops_push.routes import router as ops_push_router
@@ -71,9 +74,13 @@ app.include_router(markup_push_router)
 app.include_router(push_log_router)
 app.include_router(ps_router)
 app.include_router(catalog_router)
+app.include_router(categories_router)
+app.include_router(catalog_ingest_router)
+app.include_router(n8n_proxy_router)
 app.include_router(sync_jobs_router)
 app.include_router(ops_config_router)
 app.include_router(ops_push_router)
+app.include_router(promostandards_sync_router)
 
 
 @app.get("/health")

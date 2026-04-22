@@ -1,4 +1,4 @@
-import StorefrontShell from "@/components/storefront/storefront-shell";
+import { StorefrontShell } from "@/components/storefront/storefront-shell";
 
 export default function StorefrontLayout({
   children,

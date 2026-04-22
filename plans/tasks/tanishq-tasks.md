@@ -86,6 +86,8 @@ For every PR:
 - [ ] Urvashi 5 — Category OPS input endpoint (B5)
 - [ ] Urvashi 6 — Image pipeline cache header (B6)
 - [ ] Urvashi 7 — Wire S&S/4Over protocols (G2)
+- [ ] Urvashi 8 — Fix SanMar protocol in supplier form
+- [ ] Urvashi 9 — Products API no-supplier filter
 - [ ] Tanishq — C2 E2E manual push test (requires OPS creds)
 - [ ] Tanishq — C3 error path test
 - [ ] Tanishq — C4 PUSH_README.md

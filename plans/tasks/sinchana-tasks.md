@@ -2,28 +2,32 @@
 
 **Sprint:** OPS Push Pipeline + V1f UX Overhaul  
 **Spec:** `docs/superpowers/specs/2026-04-22-remaining-tasks-design.md`  
-**Reference:** `plans/2026-04-16-v1-integration-pipeline.md` Tasks 20 + 21  
 **Branch per task:** `sinchana/<task-slug>` → one PR per task
 
 ---
 
 ## Overview
 
-4 tasks. Frontend-only. Tasks 1 is a quick type addition; Tasks 2–4 are larger UX work for V1f. Do in priority order.
+4 sprint tasks + 2 SanMar tasks. Tasks 2, 3, 4 are already done — verified against codebase. Real work is Task 1 (quick type addition) and SanMar Task 1 (error handling branch in n8n workflow JSON).
 
 ---
 
-## Task 1 — `ProductPushLogRead` TypeScript Type (D1) ⚡ FIRST
+## Task 1 — `ProductPushLogRead` TypeScript Type ⚡ FIRST
 
-**File:** `frontend/src/lib/types.ts` (modify — append)
+**File:** `frontend/src/lib/types.ts`  
+**Effort:** XS — append at end of file (line 203)
 
-Add this interface:
+`types.ts` currently ends at line 203 with `FieldMapping`. Append after the last interface:
 
 ```ts
+/* ─── Push Log ───────────────────────────────────────────────────────────── */
 export interface ProductPushLogRead {
   id: string;
   product_id: string;
+  product_name: string | null;
   customer_id: string;
+  customer_name: string | null;
+  supplier_name: string | null;
   ops_product_id: string | null;
   status: "pushed" | "failed" | "skipped";
   error: string | null;
@@ -31,172 +35,177 @@ export interface ProductPushLogRead {
 }
 ```
 
-That's the full task. One PR. Ship fast — Vidhi's PushHistory component (D2) imports this type.
+Note: backend `PushLogRead` schema has `product_name`, `customer_name`, `supplier_name` as optional joined fields — include them so the PushHistory component can display them without extra API calls.
+
+Ship as a standalone PR. Vidhi's PushHistory component imports this type.
+
+**Acceptance:** `import type { ProductPushLogRead } from "@/lib/types"` compiles without error in Vidhi's component.
 
 ---
 
-## Task 2 — Sync Dashboard Health View (V1e Task 19)
+## ✅ Task 2 — Sync Dashboard Health View — DONE
 
-**Files:**
-- `frontend/src/app/(admin)/sync/page.tsx` — modify (add filters + auto-refresh)
-- `frontend/src/app/(admin)/page.tsx` — modify (add health summary section)
+`frontend/src/app/(admin)/sync/page.tsx` already has:
+- Filters by supplier, job type, status (lines 72–74)
+- Auto-refresh every 5s while any job is running (line 103) + background refresh every 30s (line 114)
+- Human-readable `JOB_TYPE_LABELS` map in `frontend/src/app/(admin)/page.tsx` (line 31)
 
-**Dashboard additions** (in `page.tsx` stats section):
-- Per-supplier last sync time: green if < 1h, amber if < 24h, red if > 24h
-- Sync health badge per supplier
-- Latest failed sync with error preview (click to expand full message)
+`frontend/src/app/(admin)/page.tsx` already has per-supplier health badges with green/amber/red thresholds and expandable error messages.
 
-**Sync jobs page additions** (in `sync/page.tsx`):
-- Filter row: by supplier (dropdown), by job type (`full_sync` / `inventory` / `pricing`), by status
-- Show human-readable labels: `full_sync` → "Full Refresh", `inventory` → "Inventory Update", `delta` → "Recent Changes"
-- Auto-refresh every 30s while any job has `status: "running"` (`setInterval` in `useEffect`, clear on unmount)
-- Empty state: "No sync history yet. Activate a supplier to see updates here."
-
-APIs already exist: `GET /api/sync-jobs`, `GET /api/suppliers`.
-
-**Acceptance:** Dashboard shows per-supplier health. Sync page auto-refreshes. Filters work. Human-readable labels everywhere.
+No action needed.
 
 ---
 
-## Task 3 — Terminology Overhaul (V1f Task 20)
+## ✅ Task 3 — Terminology Overhaul — DONE
 
-**Files:** All admin pages, `layout.tsx`, sidebar component
+Sidebar (`SidebarNav.tsx`) already uses: "Storefronts", "Pricing Rules", "Data Configuration", "Data Updates", "Product Catalog", sections "Products" and "Configuration".
 
-Global find-and-replace of jargon → business language. Full replacement map:
+Grep across all admin pages for `_QUERYING`, `Auth_Error`, `Technical Index`, `Push to OPS`, `Sync Jobs`, `Markup Rules`, `Field Mapping` returns zero results — all already replaced.
 
-| Current (jargon) | Replace with | Files |
-|---|---|---|
-| "Vendors" | "Suppliers" | dashboard `page.tsx` |
-| "Technical Index" | "Product Catalog" | `products/page.tsx` |
-| "Customers" | "Storefronts" | `customers/page.tsx`, sidebar |
-| "Push to OPS" | "Publish to Store" | product pages |
-| "Sync Jobs" | "Data Updates" | `sync/page.tsx`, sidebar |
-| "Markup Rules" | "Pricing Rules" | `markup/page.tsx`, sidebar |
-| "Field Mappings" | "Data Configuration" | `mappings/page.tsx`, sidebar |
-| `_QUERYING_INDEX...` | "Loading products..." | all pages |
-| `_QUERYING_ENDPOINT_REGISTRY...` | "Connecting..." | all pages |
-| `_FETCHING_METRICS...` | "Loading dashboard..." | dashboard |
-| `Auth_Error` | "Connection Failed" | status badges |
-| "delta" (job type label) | "Recent Changes" | sync page |
-| "full_sync" (job type label) | "Full Refresh" | sync page |
+Empty states already present on every page (products, customers/storefronts, sync, markup/pricing rules).
 
-**Sidebar sections** (find the sidebar nav component):
-- "Orchestration" → "Products"
-- "Management" → "Configuration"
-- "Catalog" → "Product Catalog"
-- "Customers" → "Storefronts"
-- "Markup Rules" → "Pricing Rules"
-- "Sync Jobs" → "Data Updates"
-- "Field Mapping" → "Data Configuration"
-
-**Empty states** — add to every page that can show an empty list:
-- Products: "No products yet. Connect a supplier to start syncing products."
-- Storefronts: "No storefronts added. Add your OnPrintShop storefront to start publishing."
-- Data Updates: "No sync history yet. Activate a supplier to see updates here."
-- Pricing Rules: "No pricing rules set. Add a rule to control storefront pricing."
-
-Use the existing `EmptyState` component in `components/ui/empty-state.tsx` if it exists, otherwise a simple `<div>` with the blueprint text style.
-
-**Acceptance:** Walk every admin page — zero instances of SOAP, WSDL, HMAC, OPS, delta, `_QUERYING` visible to the user. All empty states present.
+No action needed.
 
 ---
 
-## Task 4 — Simplified Supplier Form (V1f Task 21)
+## ✅ Task 4 — Simplified Supplier Form — DONE
 
-**Files:**
-- `frontend/src/components/suppliers/reveal-form.tsx` — rewrite
-- `frontend/src/app/(admin)/suppliers/page.tsx` — modify if needed
+`frontend/src/components/suppliers/reveal-form.tsx` already has the full 3-step flow: Choose supplier (with popular grid + search + custom toggle) → Connect account (API username/password + test connection) → Activate (schedule dropdown + activate button).
 
-**Goal:** Replace the 5-step progressive reveal form with a clean 3-step flow. Zero SOAP/WSDL/HMAC jargon.
+SanMar is in the popular suppliers grid. The **only issue** is SanMar's protocol is set to `"promostandards"` instead of `"sftp"` — that's being fixed by Urvashi in her Task 8 (`reveal-form.tsx` line 14).
 
-**Step 1 — "Choose your supplier"**
-- Search input: "Search 994+ suppliers..."
-- Popular supplier quick-pick grid: SanMar, S&S Activewear, Alphabroder, 4Over (with logos or just name cards)
-- "Can't find yours? Add a custom supplier" toggle reveals:
-  - Supplier name input
-  - API URL input
-  - Dropdown "Connection type":
-    - "Standard API" (maps to `protocol: "rest"`)
-    - "Secure API (signed requests)" (maps to `protocol: "rest_hmac"`)
-  - Help text: "Not sure? Choose Standard API — your supplier's documentation will specify if signed requests are required."
-- PromoStandards suppliers (from directory): auto-set `protocol: "promostandards"`, hide tech fields entirely
-
-**Step 2 — "Connect your account"**
-- "API Username" + "API Password" inputs (not "Account ID" / "auth_config")
-- "Test Connection" button → calls existing supplier test endpoint
-- Success state: "Connected to [SanMar] — ready to sync"
-- Failure state: "Could not connect. Check your username and password." + "Try Again"
-
-**Step 3 — "Activate"**
-- Summary card: name, connection status
-- Single sync frequency dropdown: "Recommended (automatic)" / "Every 30 minutes" / "Every hour" / "Once a day"
-- "Activate Supplier" button → `POST /api/suppliers` → redirect to suppliers list
-
-**Acceptance:** Walk the form as a non-technical user — no SOAP/WSDL/HMAC visible. Can add SanMar in 3 steps. Can add a custom supplier with the simplified type dropdown.
-
----
-
-## Files You Own
-
-- `frontend/src/lib/types.ts` — MODIFY (Task 1)
-- `frontend/src/app/(admin)/sync/page.tsx` — MODIFY (Task 2)
-- `frontend/src/app/(admin)/page.tsx` — MODIFY (Task 2, health section only)
-- All admin pages + sidebar — MODIFY (Task 3, terminology only)
-- `frontend/src/components/suppliers/reveal-form.tsx` — REWRITE (Task 4)
+No action needed from Sinchana on this task.
 
 ---
 
 ## SanMar SFTP Tasks
 
-**Spec:** `docs/superpowers/specs/2026-04-22-sanmar-sftp-integration-design.md`  
-**Prerequisite:** Vidhi's SanMar Tasks 3+4 must be merged before E2 (frontend verify).
+**Spec:** `docs/superpowers/specs/2026-04-22-sanmar-sftp-integration-design.md`
 
-### SanMar Task 1 — Error Handling Branch (W4)
+---
+
+### SanMar Task 1 — Error Handling Branch in Workflow JSON (W4)
 
 **File:** `n8n-workflows/sanmar-sftp-pull.json`  
+**Effort:** S  
 **No backend changes. No blockers — can start now.**
 
-The current workflow has no error handling — if any `POST /api/ingest` call fails, the loop silently dies. Add an error output from the `POST /ingest/products` HTTP node (`http-002`):
+The workflow currently has no error handling on the `POST /ingest/products` HTTP node (`http-002`). If a batch fails, the loop silently dies.
 
-1. Open `sanmar-sftp-pull.json`
-2. Find the `http-002` node (POST /ingest/products)
-3. Add a new node connected to its error output:
+**How n8n error branches work in JSON:** Each node can have `onError: "continueErrorOutput"` set, which enables an error output pin. Connect a new Code node to that error output.
 
+**Step 1 — open `sanmar-sftp-pull.json` and find the `http-002` node:**
 ```json
 {
-  "parameters": {
-    "jsCode": "const err = $input.first().json;\nreturn [{ json: {\n  event: 'sanmar_ingest_error',\n  batch_error: err.message || JSON.stringify(err),\n  timestamp: new Date().toISOString()\n}}];"
-  },
-  "name": "Format Error",
-  "type": "n8n-nodes-base.code",
-  "typeVersion": 2
+  "id": "http-002",
+  "name": "POST /ingest/products",
+  "type": "n8n-nodes-base.httpRequest",
+  ...
 }
 ```
 
-4. Connect Format Error → another HTTP node posting to a Slack webhook or just logging via `POST /api/push-log` with `status: "failed"`.
+**Step 2 — add `"onError": "continueErrorOutput"` to the http-002 node parameters.**
 
-At minimum: the error branch must prevent a silent failure. Even just a Set node that captures the error message is better than nothing.
+**Step 3 — add the Format Error Code node** (new entry in the `nodes` array):
+```json
+{
+  "id": "code-error-001",
+  "name": "Format Error",
+  "type": "n8n-nodes-base.code",
+  "typeVersion": 2,
+  "position": [1400, 400],
+  "parameters": {
+    "jsCode": "const err = $input.first().json;\nreturn [{ json: {\n  event: 'sanmar_ingest_error',\n  batch_error: err.message || JSON.stringify(err),\n  timestamp: new Date().toISOString()\n}}];"
+  }
+}
+```
 
-Import the updated workflow into n8n. Verify the error branch appears in the workflow editor.
+**Step 4 — add the connection** from http-002's error output to Format Error. In the `connections` object, find the `"POST /ingest/products"` key and add an error output entry:
+```json
+"POST /ingest/products": {
+  "main": [[{ "node": "...", "type": "main", "index": 0 }]],
+  "error": [[{ "node": "Format Error", "type": "main", "index": 0 }]]
+}
+```
+
+**Step 5 — add a Log Error HTTP node** after Format Error, posting the error to push-log:
+```json
+{
+  "id": "http-error-log",
+  "name": "Log Error",
+  "type": "n8n-nodes-base.httpRequest",
+  "typeVersion": 4.2,
+  "position": [1600, 400],
+  "parameters": {
+    "method": "POST",
+    "url": "http://host.docker.internal:8000/api/push-log",
+    "sendHeaders": true,
+    "headerParameters": {
+      "parameters": [
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+      "parameters": [
+        { "name": "status", "value": "failed" },
+        { "name": "error", "value": "={{ $json.batch_error }}" }
+      ]
+    }
+  }
+}
+```
+
+Connect Format Error → Log Error in the `connections` object.
+
+**Step 6 — import and verify in n8n:**
+```bash
+docker cp n8n-workflows/sanmar-sftp-pull.json api-hub-n8n-1:/tmp/sanmar-sftp-pull.json
+docker exec api-hub-n8n-1 n8n import:workflow --input=/tmp/sanmar-sftp-pull.json
+```
+
+Open n8n at `http://localhost:5678` → find the SanMar SFTP workflow → confirm the error branch node appears connected to the POST /ingest node.
+
+**Acceptance:** Workflow editor shows Format Error node connected to the error output of POST /ingest/products. Workflow imports without errors.
 
 ---
 
 ### SanMar Task 2 — Frontend E2E Verify (E2)
 
-**Requires:** Tanishq has run E1 (products in DB)  
-**No code changes — verification only**
+**Requires:**
+- Tanishq: P1 (SanMar DB row), P2 (SFTP cred in n8n), P3 (env var), E1 (full workflow run)
+- Urvashi Task 9: ✅ already done — products API already supports no-supplier filter
 
-Open `http://localhost:3000/storefront/vg`. Confirm:
-- SanMar products visible (brand badge shows "SanMar")
-- Product images load (not broken)
+**Code change required** — update storefront to show all products, not just `vg-ops` supplier:
+
+In `frontend/src/app/storefront/vg/page.tsx`, the current fetch (lines 19–23):
+```ts
+const sups = await api<{ id: string; slug: string }[]>("/api/suppliers");
+const vg = sups.find((s) => s.slug === "vg-ops");
+if (!vg) return;
+const rows = await api<ProductListItem[]>(`/api/products?supplier_id=${vg.id}&limit=500`);
+```
+
+Replace with:
+```ts
+const rows = await api<ProductListItem[]>(`/api/products?limit=500`);
+```
+
+Remove the `sups` and `vg` variables entirely. The products API already supports no `supplier_id` (Urvashi Task 9 confirmed done).
+
+Then open `http://localhost:3000/storefront/vg`. Confirm:
+- SanMar products visible (brand badge shows "SanMar" in blue)
+- Product images load (not broken — check browser network tab)
 - Variant picker shows real colors + sizes
-- Price block shows real pricing
-- Product detail page loads without errors
+- Price block shows pricing
+- Product detail page (`/storefront/vg/product/<id>`) loads without errors
 
-If anything is broken, create a GitHub issue with a screenshot and the product ID. Do not fix — report to Tanishq.
+If anything is broken after the code change, create a GitHub issue with a screenshot and the product ID.
 
 ---
 
-## Files You Own (SanMar additions)
+## Files You Own
 
-- `n8n-workflows/sanmar-sftp-pull.json` — MODIFY (SanMar Task 1, error branch only)
+- `frontend/src/lib/types.ts` — MODIFY (Task 1, append ProductPushLogRead)
+- `n8n-workflows/sanmar-sftp-pull.json` — MODIFY (SanMar Task 1, error branch)
+- `frontend/src/app/storefront/vg/page.tsx` — MODIFY (SanMar Task 2, remove supplier filter)

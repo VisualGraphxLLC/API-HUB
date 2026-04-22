@@ -147,24 +147,9 @@ export default function Dashboard() {
             AUTO_REFRESH_30S
           </div>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            gap: "12px",
-            padding: "16px",
-          }}
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 p-4">
           {suppliers.length === 0 ? (
-            <div
-              style={{
-                gridColumn: "1 / -1",
-                padding: "20px",
-                textAlign: "center",
-                color: "var(--ink-muted)",
-                fontSize: "14px",
-              }}
-            >
+            <div className="col-span-full p-5 text-center text-[var(--ink-muted)] text-[14px]">
               No suppliers configured yet.
             </div>
           ) : (
@@ -175,22 +160,9 @@ export default function Dashboard() {
               return (
                 <div
                   key={s.id}
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    padding: "12px",
-                    background: "var(--paper)",
-                  }}
+                  className="border border-[var(--border)] rounded-lg p-3 bg-[var(--paper)]"
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "start",
-                      marginBottom: "8px",
-                      gap: "8px",
-                    }}
-                  >
+                  <div className="flex justify-between items-start mb-2 gap-2">
                     <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--ink)" }}>
                       {s.name}
                     </div>
@@ -263,16 +235,7 @@ export default function Dashboard() {
                   onClick={() =>
                     setExpandedErr(expandedErr === latestFailed.id ? null : latestFailed.id)
                   }
-                  style={{
-                    fontSize: "12px",
-                    color: "var(--red)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: 0,
-                    fontFamily: "var(--font-mono)",
-                    textAlign: "left",
-                  }}
+                  className="text-[12px] text-[var(--red)] bg-none border-none cursor-pointer p-0 font-mono text-left"
                 >
                   {latestFailed.error_log.split("\n")[0].slice(0, 80)}
                   {latestFailed.error_log.length > 80 && "…"}{" "}
@@ -280,18 +243,7 @@ export default function Dashboard() {
                 </button>
                 {expandedErr === latestFailed.id && (
                   <pre
-                    style={{
-                      marginTop: "8px",
-                      padding: "12px",
-                      background: "rgba(185,50,50,0.06)",
-                      color: "var(--red)",
-                      fontSize: "11px",
-                      fontFamily: "var(--font-mono)",
-                      borderRadius: "6px",
-                      overflow: "auto",
-                      maxHeight: "200px",
-                      whiteSpace: "pre-wrap",
-                    }}
+                    className="mt-2 p-3 bg-[rgba(185,50,50,0.06)] text-[var(--red)] text-[11px] font-mono rounded-md overflow-auto max-h-[200px] whitespace-pre-wrap"
                   >
                     {latestFailed.error_log}
                   </pre>

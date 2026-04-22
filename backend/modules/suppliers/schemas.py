@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-Protocol = Literal["soap", "rest", "hmac", "ops_graphql", "promostandards"]
+Protocol = Literal["soap", "rest", "hmac", "ops_graphql", "promostandards", "ps"]
 
 
 class SupplierCreate(BaseModel):

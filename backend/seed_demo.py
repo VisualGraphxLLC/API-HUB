@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Load .env before importing database (which reads os.getenv at import time)
 from dotenv import load_dotenv
-load_dotenv(Path(__file__).parent.parent / ".env")
+load_dotenv(Path(__file__).parent / ".env")
 
 from database import Base, async_session, engine
 from modules.catalog.models import Product, ProductVariant
@@ -104,6 +104,31 @@ DEMO_PRODUCTS = [
             {"color": "Smoke", "size": "XS", "sku": "AA1070-SMK-XS", "base_price": "8.50", "inventory": 75},
             {"color": "Smoke", "size": "S",  "sku": "AA1070-SMK-S",  "base_price": "8.50", "inventory": 150},
             {"color": "Smoke", "size": "M",  "sku": "AA1070-SMK-M",  "base_price": "8.50", "inventory": 200},
+        ],
+    },
+    {
+        "supplier_slug": "vg-ops",
+        "supplier_sku": "VG-101",
+        "product_name": "Premium Cotton Polo",
+        "brand": "VG Signature",
+        "description": "High-quality cotton polo with reinforced stitching.",
+        "product_type": "apparel",
+        "image_url": "https://placehold.co/400x400/png?text=Polo",
+        "variants": [
+            {"color": "Royal Blue", "size": "M", "sku": "VG-101-RB-M", "base_price": "19.99", "inventory": 50},
+            {"color": "Royal Blue", "size": "L", "sku": "VG-101-RB-L", "base_price": "19.99", "inventory": 45},
+        ],
+    },
+    {
+        "supplier_slug": "vg-ops",
+        "supplier_sku": "VG-202",
+        "product_name": "Performance Tech Hoodie",
+        "brand": "VG Active",
+        "description": "Moisture-wicking tech hoodie for all-day comfort.",
+        "product_type": "apparel",
+        "image_url": "https://placehold.co/400x400/png?text=Hoodie",
+        "variants": [
+            {"color": "Charcoal", "size": "L", "sku": "VG-202-CH-L", "base_price": "45.00", "inventory": 120},
         ],
     },
 ]

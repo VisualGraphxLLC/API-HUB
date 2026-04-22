@@ -133,23 +133,23 @@ export default function Dashboard() {
         </div>
         <div className="stat-card">
           <div className="stat-label">Inventory Freshness</div>
-          <div className="stat-value" style={{ color: invHealth.color, fontSize: "22px" }}>
+          <div className={`stat-value text-[22px]`} style={{ color: invHealth.color }}>
             {invFreshIso ? timeAgo(invFreshIso) : "—"}
           </div>
           <div className="stat-note">{invHealth.label}</div>
         </div>
       </div>
 
-      <div className="panel" style={{ marginBottom: "20px" }}>
+      <div className="panel mb-5">
         <div className="panel-header">
           <div className="panel-title">Supplier Health</div>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-muted)" }}>
+          <div className="font-mono text-[11px] text-[#888894]">
             AUTO_REFRESH_30S
           </div>
         </div>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 p-4">
           {suppliers.length === 0 ? (
-            <div className="col-span-full p-5 text-center text-[var(--ink-muted)] text-[14px]">
+            <div className="col-span-full p-5 text-center text-[#888894] text-[14px]">
               No suppliers configured yet.
             </div>
           ) : (
@@ -160,42 +160,26 @@ export default function Dashboard() {
               return (
                 <div
                   key={s.id}
-                  className="border border-[var(--border)] rounded-lg p-3 bg-[var(--paper)]"
+                  className="border border-[#cfccc8] rounded-lg p-3 bg-white"
                 >
                   <div className="flex justify-between items-start mb-2 gap-2">
-                    <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--ink)" }}>
+                    <div className="font-semibold text-[13px] text-[#1e1e24]">
                       {s.name}
                     </div>
                     <span
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-[10px] whitespace-nowrap"
                       style={{
-                        fontSize: "10px",
-                        fontWeight: 600,
-                        padding: "2px 8px",
-                        borderRadius: "10px",
                         background: h.color + "22",
                         color: h.color,
-                        whiteSpace: "nowrap",
                       }}
                     >
                       {h.label}
                     </span>
                   </div>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      color: "var(--ink-muted)",
-                      fontFamily: "var(--font-mono)",
-                    }}
-                  >
+                  <div className="text-[11px] text-[#888894] font-mono">
                     Last sync: {lastIso ? timeAgo(lastIso) : "—"}
                   </div>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      color: "var(--ink-muted)",
-                      fontFamily: "var(--font-mono)",
-                    }}
-                  >
+                  <div className="text-[11px] text-[#888894] font-mono">
                     Products: {s.product_count}
                   </div>
                 </div>
@@ -206,26 +190,17 @@ export default function Dashboard() {
       </div>
 
       {latestFailed && (
-        <div
-          className="panel"
-          style={{ marginBottom: "20px", borderColor: "var(--red)" }}
-        >
+        <div className="panel mb-5 border-[#b93232]">
           <div className="panel-header">
-            <div className="panel-title" style={{ color: "var(--red)" }}>
+            <div className="panel-title text-[#b93232]">
               Latest Failed Sync
             </div>
-            <span
-              style={{
-                fontSize: "11px",
-                color: "var(--ink-muted)",
-                fontFamily: "var(--font-mono)",
-              }}
-            >
+            <span className="text-[11px] text-[#888894] font-mono">
               {timeAgo(latestFailed.started_at)}
             </span>
           </div>
-          <div style={{ padding: "12px 16px" }}>
-            <div style={{ fontSize: "13px", marginBottom: "8px" }}>
+          <div className="p-3 px-4">
+            <div className="text-[13px] mb-2">
               <strong>{latestFailed.supplier_name}</strong> —{" "}
               {JOB_TYPE_LABELS[latestFailed.job_type] ?? latestFailed.job_type}
             </div>
@@ -235,7 +210,7 @@ export default function Dashboard() {
                   onClick={() =>
                     setExpandedErr(expandedErr === latestFailed.id ? null : latestFailed.id)
                   }
-                  className="text-[12px] text-[var(--red)] bg-none border-none cursor-pointer p-0 font-mono text-left"
+                  className="text-[12px] text-[#b93232] bg-none border-none cursor-pointer p-0 font-mono text-left"
                 >
                   {latestFailed.error_log.split("\n")[0].slice(0, 80)}
                   {latestFailed.error_log.length > 80 && "…"}{" "}
@@ -243,7 +218,7 @@ export default function Dashboard() {
                 </button>
                 {expandedErr === latestFailed.id && (
                   <pre
-                    className="mt-2 p-3 bg-[rgba(185,50,50,0.06)] text-[var(--red)] text-[11px] font-mono rounded-md overflow-auto max-h-[200px] whitespace-pre-wrap"
+                    className="mt-2 p-3 bg-[#b93232]/[0.06] text-[#b93232] text-[11px] font-mono rounded-md overflow-auto max-h-[200px] whitespace-pre-wrap"
                   >
                     {latestFailed.error_log}
                   </pre>
@@ -257,13 +232,7 @@ export default function Dashboard() {
       <div className="panel">
         <div className="panel-header">
           <div className="panel-title">Recent Data Updates</div>
-          <div
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "11px",
-              color: "var(--blue)",
-            }}
-          >
+          <div className="font-mono text-[11px] text-[#1e4d92]">
             LIVE_STREAMING
           </div>
         </div>
@@ -309,12 +278,7 @@ export default function Dashboard() {
               <tr>
                 <td
                   colSpan={4}
-                  style={{
-                    padding: "40px",
-                    textAlign: "center",
-                    color: "var(--ink-muted)",
-                    fontSize: "14px",
-                  }}
+                  className="p-10 text-center text-[#888894] text-[14px]"
                 >
                   No sync history yet. Activate a supplier to see updates here.
                 </td>

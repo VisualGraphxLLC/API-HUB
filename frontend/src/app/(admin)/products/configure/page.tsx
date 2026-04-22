@@ -7,9 +7,9 @@ export default function ConfigureStorefrontPage() {
           <div className="page-subtitle">Configure OPS storefront settings</div>
         </div>
       </div>
-      <div className="panel" style={{ padding: "40px", textAlign: "center" }}>
-        <h2 style={{ marginBottom: "16px", color: "var(--ink)" }}>Storefront Configuration</h2>
-        <p style={{ color: "var(--ink-muted)", maxWidth: "500px", margin: "0 auto" }}>
+      <div className="panel p-10 text-center">
+        <h2 className="mb-4 text-[#1e1e24]">Storefront Configuration</h2>
+        <p className="text-[#888894] max-w-[500px] mx-auto">
           This feature (V1g Task 23) is currently under development by Tanishq and Vidhi.
           It will allow you to configure OPS categories, master options, and pricing previews before publishing.
         </p>

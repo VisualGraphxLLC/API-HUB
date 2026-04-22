@@ -94,46 +94,36 @@ export default function VGStorefrontPage() {
   }, [products, filters]);
 
   return (
-    <div className="flex min-h-screen bg-[#f2f0ed]">
-      {/* 1. Left Rail (Desktop) */}
-      <div className="hidden md:block">
-        <LeftRail categories={categories} counts={counts} />
-      </div>
-
-      <div className="flex-1 flex flex-col p-5 gap-5 overflow-hidden">
-        <div className="flex items-center justify-between">
-          <div className="text-[13px] text-[#888894] font-mono">
-            {loading ? "Loading…" : `${visible.length} / ${products.length} products`}
-          </div>
-          <FilterButton />
+    <div className="flex-1 flex flex-col p-5 gap-5 overflow-hidden">
+      <div className="flex items-center justify-between">
+        <div className="text-[13px] text-[#888894] font-mono">
+          {loading ? "Loading…" : `${visible.length} / ${products.length} products`}
         </div>
-
-        <ActiveFilterChips />
-
-        {loading ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-[340px] bg-[#f9f7f4] border border-[#ebe8e3] rounded-[10px] animate-pulse" />
-            ))}
-          </div>
-        ) : visible.length === 0 ? (
-          <div className="border border-dashed border-[#cfccc8] rounded-[10px] p-16 text-center bg-white">
-            <div className="text-[14px] font-bold text-[#1e1e24] mb-1">No matches</div>
-            <div className="text-[12px] text-[#888894]">
-              Try removing filters or clearing the search.
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
-            {visible.map((p) => (
-              <StorefrontProductCard key={p.id} product={p} />
-            ))}
-          </div>
-        )}
+        <FilterButton />
       </div>
 
-      {/* 3. Mobile Filter FAB + Sheet */}
-      <MobileFilterSheet categories={categories} counts={counts} />
+      <ActiveFilterChips />
+
+      {loading ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-[340px] bg-[#f9f7f4] border border-[#ebe8e3] rounded-[10px] animate-pulse" />
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="border border-dashed border-[#cfccc8] rounded-[10px] p-16 text-center bg-white">
+          <div className="text-[14px] font-bold text-[#1e1e24] mb-1">No matches</div>
+          <div className="text-[12px] text-[#888894]">
+            Try removing filters or clearing the search.
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
+          {visible.map((p) => (
+            <StorefrontProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

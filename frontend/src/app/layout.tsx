@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import CursorTrail from "@/components/CursorTrail";
-import SidebarNav from "@/components/SidebarNav";
+import ConditionalShell from "@/components/ConditionalShell";
 
 export const metadata: Metadata = {
   title: "API-HUB",
@@ -16,12 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="shell">
-          <SidebarNav />
-          <div className="main">
-            {children}
-          </div>
-        </div>
+        <ConditionalShell>{children}</ConditionalShell>
         <CursorTrail />
       </body>
     </html>

@@ -10,7 +10,7 @@ from database import get_db
 from modules.suppliers.models import Supplier
 
 from .models import Category, Product, ProductOption, ProductVariant
-from .schemas import ProductListRead, ProductRead
+from .schemas import ProductListRead, ProductRead, OPSCategoryInput
 
 router = APIRouter(prefix="/api/products", tags=["catalog"])
 categories_router = APIRouter(prefix="/api/categories", tags=["catalog"])
@@ -167,3 +167,16 @@ async def get_category(category_id: UUID, db: AsyncSession = Depends(get_db)):
         "parent_id": str(cat.parent_id) if cat.parent_id else None,
         "sort_order": cat.sort_order,
     }
+
+
+@categories_router.get("/{category_id}/ops-input", response_model=OPSCategoryInput)
+async def get_category_ops_input(category_id: UUID, db: AsyncSession = Depends(get_db)):
+    cat = await db.get(Category, category_id)
+    if not cat:
+        raise HTTPException(404, "Category not found")
+    return OPSCategoryInput(
+        category_name=cat.name,
+        parent_id=-1,
+        status=1,
+        category_internal_name=cat.external_id or cat.name.lower().replace(" ", "_"),
+    )

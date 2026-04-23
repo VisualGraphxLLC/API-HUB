@@ -3,29 +3,51 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 
 from main import app
 from database import async_session
 
 
-@pytest.mark.asyncio
-async def test_get_product_options_config_defaults_to_disabled():
+def _unique_slug(prefix: str) -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:8]}"
+
+
+@pytest.fixture(autouse=True)
+async def _cleanup():
+    yield
+    from modules.master_options.models import MasterOption
+    from modules.catalog.models import Product, ProductOption, ProductOptionAttribute
+    from modules.suppliers.models import Supplier
+    async with async_session() as s:
+        await s.execute(delete(ProductOptionAttribute))
+        await s.execute(delete(ProductOption))
+        await s.execute(delete(Product).where(Product.supplier_sku.like("%-test-%")))
+        await s.execute(delete(Supplier).where(Supplier.slug.like("vg-ops-test-%")))
+        await s.execute(delete(MasterOption))
+        await s.commit()
+
+
+async def _make_supplier_and_product(sku: str, slug_prefix: str = "vg-ops-test"):
     from modules.suppliers.models import Supplier
     from modules.catalog.models import Product
 
-    secret = os.environ["INGEST_SHARED_SECRET"]
-
     async with async_session() as s:
-        sup = Supplier(name="TestSup", slug="vg-ops-test", protocol="soap", auth_config={})
+        sup = Supplier(name=slug_prefix, slug=_unique_slug(slug_prefix), protocol="soap", auth_config={})
         s.add(sup)
         await s.commit()
         await s.refresh(sup)
-        prod = Product(supplier_id=sup.id, supplier_sku="TS-1", product_name="Test")
+        prod = Product(supplier_id=sup.id, supplier_sku=sku, product_name="P")
         s.add(prod)
         await s.commit()
         await s.refresh(prod)
-        pid = prod.id
+        return prod.id
+
+
+@pytest.mark.asyncio
+async def test_get_product_options_config_defaults_to_disabled():
+    secret = os.environ["INGEST_SHARED_SECRET"]
+    pid = await _make_supplier_and_product("TS-test-1")
 
     payload = [{
         "ops_master_option_id": 601,
@@ -61,18 +83,8 @@ async def test_get_product_options_config_404_for_unknown_product():
 
 @pytest.mark.asyncio
 async def test_put_product_options_config_persists():
-    from modules.suppliers.models import Supplier
-    from modules.catalog.models import Product
-
     secret = os.environ["INGEST_SHARED_SECRET"]
-    async with async_session() as s:
-        sup = Supplier(name="PutSup", slug="vg-ops-test", protocol="soap", auth_config={})
-        s.add(sup)
-        await s.commit(); await s.refresh(sup)
-        prod = Product(supplier_id=sup.id, supplier_sku="PUT-1", product_name="P")
-        s.add(prod)
-        await s.commit(); await s.refresh(prod)
-        pid = prod.id
+    pid = await _make_supplier_and_product("PUT-test-1")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         await c.post("/api/ingest/master-options", headers={"X-Ingest-Secret": secret}, json=[{
@@ -99,16 +111,8 @@ async def test_put_product_options_config_persists():
 
 @pytest.mark.asyncio
 async def test_delete_product_option():
-    from modules.suppliers.models import Supplier
-    from modules.catalog.models import Product
-
     secret = os.environ["INGEST_SHARED_SECRET"]
-    async with async_session() as s:
-        sup = Supplier(name="DelSup", slug="vg-ops-test", protocol="soap", auth_config={})
-        s.add(sup); await s.commit(); await s.refresh(sup)
-        prod = Product(supplier_id=sup.id, supplier_sku="DEL-1", product_name="D")
-        s.add(prod); await s.commit(); await s.refresh(prod)
-        pid = prod.id
+    pid = await _make_supplier_and_product("DEL-test-1")
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         await c.post("/api/ingest/master-options", headers={"X-Ingest-Secret": secret}, json=[{
@@ -132,10 +136,10 @@ async def test_duplicate_options_copies_enabled_cards():
 
     secret = os.environ["INGEST_SHARED_SECRET"]
     async with async_session() as s:
-        sup = Supplier(name="DupSup", slug="vg-ops-test", protocol="soap", auth_config={})
+        sup = Supplier(name="DupSup", slug=_unique_slug("vg-ops-test"), protocol="soap", auth_config={})
         s.add(sup); await s.commit(); await s.refresh(sup)
-        src = Product(supplier_id=sup.id, supplier_sku="SRC-1", product_name="src")
-        dst = Product(supplier_id=sup.id, supplier_sku="DST-1", product_name="dst")
+        src = Product(supplier_id=sup.id, supplier_sku="SRC-test-1", product_name="src")
+        dst = Product(supplier_id=sup.id, supplier_sku="DST-test-1", product_name="dst")
         s.add(src); s.add(dst); await s.commit()
         await s.refresh(src); await s.refresh(dst)
         src_id, dst_id = src.id, dst.id
@@ -147,7 +151,6 @@ async def test_duplicate_options_copies_enabled_cards():
         }])
         r = await c.get(f"/api/products/{src_id}/options-config")
         cfg = r.json()
-        # target by ops_master_option_id, not index
         target = next(i for i, c in enumerate(cfg) if c["ops_master_option_id"] == 901)
         cfg[target]["enabled"] = True
         cfg[target]["attributes"][0]["enabled"] = True

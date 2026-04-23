@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Base, engine, get_db
@@ -34,6 +34,19 @@ from modules.ops_push.routes import router as ops_push_router
 from modules.push_candidates.routes import router as push_candidates_router
 
 
+# Idempotent schema upgrades. `Base.metadata.create_all` creates new tables
+# but never alters existing ones, so ADD COLUMN steps ship here. Each statement
+# must be idempotent (IF NOT EXISTS) so restarts are safe.
+_SCHEMA_UPGRADES: list[str] = [
+    "ALTER TABLE product_options ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT false NOT NULL",
+    "ALTER TABLE product_options ADD COLUMN IF NOT EXISTS overridden_sort INTEGER",
+    "ALTER TABLE product_option_attributes ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT false NOT NULL",
+    "ALTER TABLE product_option_attributes ADD COLUMN IF NOT EXISTS price NUMERIC(10,2)",
+    "ALTER TABLE product_option_attributes ADD COLUMN IF NOT EXISTS numeric_value NUMERIC(10,2)",
+    "ALTER TABLE product_option_attributes ADD COLUMN IF NOT EXISTS overridden_sort INTEGER",
+]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import asyncio
@@ -42,6 +55,8 @@ async def lifespan(app: FastAPI):
         try:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                for stmt in _SCHEMA_UPGRADES:
+                    await conn.execute(text(stmt))
             break
         except Exception as e:
             retries -= 1

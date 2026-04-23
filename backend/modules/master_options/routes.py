@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
+from modules.catalog.ingest import require_ingest_secret
+from modules.n8n_proxy.routes import trigger_workflow_by_id
 
 from .models import MasterOption
 from .schemas import MasterOptionRead, OptionConfigItem, SyncStatus
@@ -118,16 +120,7 @@ async def duplicate_from(
     return {"copied": copied, "status": "ok"}
 
 
-@router.post("/sync")
+@router.post("/sync", dependencies=[Depends(require_ingest_secret)])
 async def trigger_sync():
     """Trigger the n8n master options pull workflow."""
-    import httpx
-    workflow_id = "ops-master-options-pull-001"
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.post(
-            f"http://localhost:8000/api/n8n/workflows/{workflow_id}/trigger",
-            json={},
-        )
-    if r.status_code >= 300:
-        raise HTTPException(502, f"n8n trigger failed: {r.text[:200]}")
-    return r.json()
+    return await trigger_workflow_by_id("ops-master-options-pull-001")

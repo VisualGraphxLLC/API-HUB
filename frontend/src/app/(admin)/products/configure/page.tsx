@@ -31,7 +31,11 @@ export default function MasterOptionsCatalogPage() {
   const triggerSync = async () => {
     setSyncing(true);
     try {
-      await api("/api/master-options/sync", { method: "POST" });
+      const res = await fetch("/api/master-options/sync", { method: "POST" });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Sync failed: ${res.status} ${body.slice(0, 200)}`);
+      }
       await new Promise((r) => setTimeout(r, 3000));
       await load();
     } catch (e) {

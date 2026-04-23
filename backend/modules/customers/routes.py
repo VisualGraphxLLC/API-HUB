@@ -1,5 +1,6 @@
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -106,5 +107,36 @@ async def test_customer(customer_id: UUID, db: AsyncSession = Depends(get_db)):
     customer = result.scalar_one_or_none()
     if not customer:
         raise HTTPException(404, "Customer not found")
-    # TODO: attempt OAuth2 token fetch against ops_token_url
-    return {"ok": True, "customer_id": str(customer_id)}
+
+    client_secret = (customer.ops_auth_config or {}).get("client_secret", "")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as http:
+            resp = await http.post(
+                customer.ops_token_url,
+                data={
+                    "grant_type": "client_credentials",
+                    "client_id": customer.ops_client_id,
+                    "client_secret": client_secret,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+        if resp.status_code == 200:
+            return {
+                "ok": True,
+                "customer_id": str(customer_id),
+                "token_endpoint": customer.ops_token_url,
+            }
+        return {
+            "ok": False,
+            "customer_id": str(customer_id),
+            "token_endpoint": customer.ops_token_url,
+            "http_status": resp.status_code,
+            "error": resp.text[:200],
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "customer_id": str(customer_id),
+            "token_endpoint": customer.ops_token_url,
+            "error": str(exc)[:200],
+        }

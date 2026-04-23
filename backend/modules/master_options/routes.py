@@ -9,7 +9,12 @@ from database import get_db
 
 from .models import MasterOption
 from .schemas import MasterOptionRead, OptionConfigItem, SyncStatus
-from .service import load_product_config
+from .service import (
+    delete_product_option,
+    load_product_config,
+    save_product_config,
+    save_product_option,
+)
 
 router = APIRouter(prefix="/api/master-options", tags=["master_options"])
 
@@ -57,3 +62,41 @@ async def get_product_options_config(product_id: UUID, db: AsyncSession = Depend
     if not exists:
         raise HTTPException(404, "Product not found")
     return await load_product_config(db, product_id)
+
+
+@product_config_router.put("/{product_id}/options-config")
+async def put_product_options_config(
+    product_id: UUID,
+    body: list[OptionConfigItem],
+    db: AsyncSession = Depends(get_db),
+):
+    from modules.catalog.models import Product
+    exists = (await db.execute(select(Product.id).where(Product.id == product_id))).scalar_one_or_none()
+    if not exists:
+        raise HTTPException(404, "Product not found")
+    await save_product_config(db, product_id, body)
+    return {"saved": len(body), "status": "ok"}
+
+
+@product_config_router.patch("/{product_id}/options-config/{master_option_id}")
+async def patch_product_option(
+    product_id: UUID,
+    master_option_id: UUID,
+    body: OptionConfigItem,
+    db: AsyncSession = Depends(get_db),
+):
+    if body.master_option_id != master_option_id:
+        raise HTTPException(400, "Path master_option_id must match body")
+    await save_product_option(db, product_id, body)
+    await db.commit()
+    return {"status": "ok"}
+
+
+@product_config_router.delete("/{product_id}/options-config/{master_option_id}")
+async def delete_product_option_route(
+    product_id: UUID,
+    master_option_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    await delete_product_option(db, product_id, master_option_id)
+    return {"status": "deleted"}

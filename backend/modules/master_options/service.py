@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -74,3 +75,90 @@ async def load_product_config(db: AsyncSession, product_id: UUID) -> list[Option
             )
         )
     return out
+
+
+async def save_product_option(
+    db: AsyncSession,
+    product_id: UUID,
+    item: OptionConfigItem,
+) -> None:
+    """Upsert one master option assignment for a product."""
+    mo = (
+        await db.execute(select(MasterOption).where(MasterOption.id == item.master_option_id))
+    ).scalar_one_or_none()
+    if not mo:
+        return
+
+    stmt = (
+        pg_insert(ProductOption)
+        .values(
+            product_id=product_id,
+            option_key=mo.option_key or f"mo_{mo.ops_master_option_id}",
+            title=mo.title,
+            options_type=mo.options_type,
+            sort_order=mo.sort_order,
+            master_option_id=mo.ops_master_option_id,
+            required=False,
+            status=1,
+            enabled=item.enabled,
+        )
+        .on_conflict_do_update(
+            index_elements=["product_id", "option_key"],
+            set_={
+                "title": mo.title,
+                "options_type": mo.options_type,
+                "master_option_id": mo.ops_master_option_id,
+                "enabled": item.enabled,
+            },
+        )
+        .returning(ProductOption.id)
+    )
+    po_id: UUID = (await db.execute(stmt)).scalar_one()
+
+    # Replace attributes
+    await db.execute(
+        delete(ProductOptionAttribute).where(ProductOptionAttribute.product_option_id == po_id)
+    )
+    for attr in item.attributes:
+        db.add(
+            ProductOptionAttribute(
+                product_option_id=po_id,
+                ops_attribute_id=attr.ops_attribute_id,
+                title=attr.title,
+                sort_order=attr.sort_order,
+                status=1,
+                enabled=attr.enabled,
+                price=attr.price,
+                numeric_value=attr.numeric_value,
+                overridden_sort=attr.sort_order,
+            )
+        )
+
+
+async def save_product_config(
+    db: AsyncSession,
+    product_id: UUID,
+    items: list[OptionConfigItem],
+) -> None:
+    for item in items:
+        await save_product_option(db, product_id, item)
+    await db.commit()
+
+
+async def delete_product_option(
+    db: AsyncSession,
+    product_id: UUID,
+    master_option_id: UUID,
+) -> None:
+    mo = (
+        await db.execute(select(MasterOption).where(MasterOption.id == master_option_id))
+    ).scalar_one_or_none()
+    if not mo:
+        return
+    await db.execute(
+        delete(ProductOption).where(
+            ProductOption.product_id == product_id,
+            ProductOption.master_option_id == mo.ops_master_option_id,
+        )
+    )
+    await db.commit()

@@ -100,3 +100,34 @@ async def delete_product_option_route(
 ):
     await delete_product_option(db, product_id, master_option_id)
     return {"status": "deleted"}
+
+
+@product_config_router.post("/{product_id}/options-config/duplicate-from/{src_product_id}")
+async def duplicate_from(
+    product_id: UUID,
+    src_product_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    from modules.catalog.models import Product
+    for pid in (product_id, src_product_id):
+        exists = (await db.execute(select(Product.id).where(Product.id == pid))).scalar_one_or_none()
+        if not exists:
+            raise HTTPException(404, f"Product {pid} not found")
+    from .service import duplicate_product_config
+    copied = await duplicate_product_config(db, src_product_id, product_id)
+    return {"copied": copied, "status": "ok"}
+
+
+@router.post("/sync")
+async def trigger_sync():
+    """Trigger the n8n master options pull workflow."""
+    import httpx
+    workflow_id = "ops-master-options-pull-001"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.post(
+            f"http://localhost:8000/api/n8n/workflows/{workflow_id}/trigger",
+            json={},
+        )
+    if r.status_code >= 300:
+        raise HTTPException(502, f"n8n trigger failed: {r.text[:200]}")
+    return r.json()

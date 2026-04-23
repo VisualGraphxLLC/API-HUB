@@ -145,6 +145,18 @@ async def save_product_config(
     await db.commit()
 
 
+async def duplicate_product_config(
+    db: AsyncSession, src_product_id: UUID, dest_product_id: UUID
+) -> int:
+    """Copy src product's options + attributes to dest product. Returns count copied."""
+    src_cfg = await load_product_config(db, src_product_id)
+    enabled_items = [item for item in src_cfg if item.enabled]
+    for item in enabled_items:
+        await save_product_option(db, dest_product_id, item)
+    await db.commit()
+    return len(enabled_items)
+
+
 async def delete_product_option(
     db: AsyncSession,
     product_id: UUID,

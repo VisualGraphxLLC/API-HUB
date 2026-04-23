@@ -123,3 +123,39 @@ async def test_delete_product_option():
         mo_id = cfg[target_idx]["master_option_id"]
         r = await c.delete(f"/api/products/{pid}/options-config/{mo_id}")
         assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_duplicate_options_copies_enabled_cards():
+    from modules.suppliers.models import Supplier
+    from modules.catalog.models import Product
+
+    secret = os.environ["INGEST_SHARED_SECRET"]
+    async with async_session() as s:
+        sup = Supplier(name="DupSup", slug="vg-ops-test", protocol="soap", auth_config={})
+        s.add(sup); await s.commit(); await s.refresh(sup)
+        src = Product(supplier_id=sup.id, supplier_sku="SRC-1", product_name="src")
+        dst = Product(supplier_id=sup.id, supplier_sku="DST-1", product_name="dst")
+        s.add(src); s.add(dst); await s.commit()
+        await s.refresh(src); await s.refresh(dst)
+        src_id, dst_id = src.id, dst.id
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        await c.post("/api/ingest/master-options", headers={"X-Ingest-Secret": secret}, json=[{
+            "ops_master_option_id": 901, "title": "DupOpt",
+            "attributes": [{"ops_attribute_id": 9111, "title": "A", "sort_order": 1}],
+        }])
+        r = await c.get(f"/api/products/{src_id}/options-config")
+        cfg = r.json()
+        # target by ops_master_option_id, not index
+        target = next(i for i, c in enumerate(cfg) if c["ops_master_option_id"] == 901)
+        cfg[target]["enabled"] = True
+        cfg[target]["attributes"][0]["enabled"] = True
+        await c.put(f"/api/products/{src_id}/options-config", json=cfg)
+        r = await c.post(f"/api/products/{dst_id}/options-config/duplicate-from/{src_id}")
+        assert r.status_code == 200
+        assert r.json()["copied"] >= 1
+        r = await c.get(f"/api/products/{dst_id}/options-config")
+        data = r.json()
+        dup = [m for m in data if m["ops_master_option_id"] == 901][0]
+        assert dup["enabled"] is True

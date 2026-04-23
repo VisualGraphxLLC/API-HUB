@@ -394,3 +394,25 @@ async def test_parse_product_single_description_still_works():
     product = await _client(svc).get_product("PC61")
     assert product is not None
     assert product.description == "100% cotton"
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Media service — v1.1.0 default + required mediaType
+# ---------------------------------------------------------------------------
+
+async def test_get_media_uses_v110_and_sends_mediatype_image():
+    """SanMar requires wsVersion=1.1.0 and mediaType field."""
+    svc = FakeService()
+    svc.responses[("getMediaContent", "PC61")] = NS(MediaContentArray=None)
+    await _client(svc).get_media(["PC61"])
+    _, kwargs = svc.calls[-1]
+    assert kwargs["wsVersion"] == "1.1.0"
+    assert kwargs["mediaType"] == "Image"
+
+
+async def test_get_media_accepts_document_media_type():
+    svc = FakeService()
+    svc.responses[("getMediaContent", "PC61")] = NS(MediaContentArray=None)
+    await _client(svc).get_media(["PC61"], media_type="Document")
+    _, kwargs = svc.calls[-1]
+    assert kwargs["mediaType"] == "Document"

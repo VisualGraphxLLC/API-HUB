@@ -53,3 +53,36 @@ async def test_ingest_master_options_rejects_bad_secret():
             headers={"X-Ingest-Secret": "wrong"},
         )
     assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_list_master_options_returns_ingested():
+    secret = os.environ["INGEST_SHARED_SECRET"]
+    payload = [{
+        "ops_master_option_id": 502,
+        "title": "Print Sides",
+        "options_type": "radio",
+        "attributes": [
+            {"ops_attribute_id": 9101, "title": "Single", "sort_order": 1},
+            {"ops_attribute_id": 9102, "title": "Double", "sort_order": 2},
+        ],
+    }]
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        await c.post("/api/ingest/master-options", json=payload, headers={"X-Ingest-Secret": secret})
+        r = await c.get("/api/master-options")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) >= 1
+    found = [m for m in data if m["ops_master_option_id"] == 502]
+    assert found
+    assert len(found[0]["attributes"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_sync_status_reports_count():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        r = await c.get("/api/master-options/sync-status")
+    assert r.status_code == 200
+    body = r.json()
+    assert "total" in body
+    assert "last_synced_at" in body

@@ -14,6 +14,7 @@ import modules.customers.models  # noqa: F401
 import modules.markup.models  # noqa: F401
 import modules.push_log.models  # noqa: F401
 import modules.sync_jobs.models  # noqa: F401
+import modules.master_options.models  # noqa: F401
 
 from modules.suppliers.models import Supplier
 from modules.catalog.models import Product, ProductVariant

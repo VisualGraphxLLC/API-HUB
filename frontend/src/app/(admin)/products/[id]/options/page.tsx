@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { OptionConfigItem, Product } from "@/lib/types";
+import type { OptionConfigItem, Product, Supplier } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OptionCard } from "@/components/options/option-card";
@@ -12,6 +12,7 @@ export default function ConfigureProductOptionsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
+  const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [cards, setCards] = useState<OptionConfigItem[]>([]);
   const [dirty, setDirty] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -22,12 +23,14 @@ export default function ConfigureProductOptionsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [p, cfg] = await Promise.all([
-          api<Product>(`/api/products/${id}`),
-          api<OptionConfigItem[]>(`/api/products/${id}/options-config`),
-        ]);
+        const p = await api<Product>(`/api/products/${id}`);
         setProduct(p);
-        setCards(cfg);
+        const sup = await api<Supplier>(`/api/suppliers/${p.supplier_id}`);
+        setSupplier(sup);
+        if (sup.protocol === "ops_graphql") {
+          const cfg = await api<OptionConfigItem[]>(`/api/products/${id}/options-config`);
+          setCards(cfg);
+        }
       } finally {
         setLoading(false);
       }
@@ -86,6 +89,26 @@ export default function ConfigureProductOptionsPage() {
   };
 
   if (loading) return <div className="p-6 text-[#888894]">Loading…</div>;
+
+  if (supplier && supplier.protocol !== "ops_graphql") {
+    return (
+      <div className="flex flex-col gap-4 p-6">
+        <div className="text-xs text-[#888894]">
+          <button onClick={() => router.back()} className="hover:underline">← Back</button>
+        </div>
+        <div className="bg-white rounded-[10px] border border-[#cfccc8] p-10 text-center">
+          <div className="text-[15px] font-semibold text-[#1e1e24] mb-2">
+            Master options not available for this product
+          </div>
+          <p className="text-sm text-[#888894] max-w-[500px] mx-auto">
+            {product?.product_name} is sourced from <strong>{supplier.name}</strong> ({supplier.protocol}).
+            Master options apply only to products pushed to OPS storefronts (Visual Graphics OPS).
+            Upstream wholesale suppliers like SanMar, 4Over, and S&S don't use this configuration.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 p-6">

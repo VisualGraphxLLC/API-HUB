@@ -14,18 +14,21 @@ router = APIRouter(tags=["push_log"])
 
 
 @router.get("/api/push-log", response_model=list[PushLogRead])
-async def list_push_logs(limit: int = 20, db: AsyncSession = Depends(get_db)):
+async def list_push_logs(product_id: UUID | None = None, limit: int = 20, db: AsyncSession = Depends(get_db)):
     from modules.catalog.models import Product
     from modules.suppliers.models import Supplier
 
+    q = select(
+        ProductPushLog, 
+        Product.product_name, 
+        Customer.name.label("customer_name"),
+        Supplier.name.label("supplier_name")
+    )
+    if product_id:
+        q = q.where(ProductPushLog.product_id == product_id)
+    
     result = await db.execute(
-        select(
-            ProductPushLog, 
-            Product.product_name, 
-            Customer.name.label("customer_name"),
-            Supplier.name.label("supplier_name")
-        )
-        .join(Product, ProductPushLog.product_id == Product.id)
+        q.join(Product, ProductPushLog.product_id == Product.id)
         .join(Customer, ProductPushLog.customer_id == Customer.id)
         .join(Supplier, Product.supplier_id == Supplier.id)
         .order_by(ProductPushLog.pushed_at.desc())

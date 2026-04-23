@@ -8,7 +8,7 @@ import os
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter(prefix="/api/n8n", tags=["n8n-proxy"])
 
@@ -103,12 +103,9 @@ async def list_executions(workflow_id: Optional[str] = None, limit: int = 20):
 
 
 @router.post("/workflows/{workflow_id}/trigger")
-async def trigger_workflow(workflow_id: str):
-    """Trigger workflow via its first webhook path.
-
-    n8n public API has no sync "run"; workflow must have an active webhook
-    trigger. We look it up and GET it.
-    """
+async def trigger_workflow(workflow_id: str, request: Request):
+    """Trigger workflow via its first webhook path, forwarding query params."""
+    params = dict(request.query_params)
     async with await _client() as c:
         r = await c.get(f"/api/v1/workflows/{workflow_id}")
         if r.status_code == 404:
@@ -132,6 +129,6 @@ async def trigger_workflow(workflow_id: str):
 
     trigger_url = f"{_base()}/webhook/{webhook_path}"
     async with httpx.AsyncClient(timeout=10.0) as c:
-        r = await c.get(trigger_url)
+        r = await c.get(trigger_url, params=params)
         r.raise_for_status()
         return {"triggered": True, "url": trigger_url, "response": r.json()}

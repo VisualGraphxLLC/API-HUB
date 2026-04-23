@@ -2,52 +2,29 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import type { ProductListItem, Supplier, Category } from "@/lib/types";
+import type { ProductListItem } from "@/lib/types";
 import { useSearch } from "@/components/storefront/search-context";
 import { FilterButton } from "@/components/storefront/filter-button";
 import { ActiveFilterChips } from "@/components/storefront/active-filter-chips";
 import { StorefrontProductCard } from "@/components/storefront/storefront-product-card";
-import { LeftRail } from "@/components/storefront/left-rail";
-import { MobileFilterSheet } from "@/components/storefront/mobile-filter-sheet";
 
-const VG_SLUG = "vg-ops";
 
 export default function VGStorefrontPage() {
   const { filters } = useSearch();
   const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const sups = await api<Supplier[]>("/api/suppliers");
-        const vg = sups.find((s) => s.slug === VG_SLUG) || sups[0] || null;
-        setSupplier(vg);
-        if (!vg) return;
-
-        const [prods, cats] = await Promise.all([
-          api<ProductListItem[]>(`/api/products?supplier_id=${vg.id}&limit=500`),
-          api<Category[]>(`/api/categories?supplier_id=${vg.id}`),
-        ]);
-
-        setProducts(prods);
-        setCategories(cats);
+        const rows = await api<ProductListItem[]>("/api/products?limit=500");
+        setProducts(rows);
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // Calculate per-category counts for the LeftRail
-  const counts = useMemo(() => {
-    const map: Record<string, number> = {};
-    products.forEach((p) => {
-      if (p.category_id) map[p.category_id] = (map[p.category_id] || 0) + 1;
-    });
-    return map;
-  }, [products]);
 
   const visible = useMemo(() => {
     let rows = products;

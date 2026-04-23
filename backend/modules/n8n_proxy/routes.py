@@ -5,12 +5,16 @@ All routes authenticate upstream via `N8N_API_KEY` and return condensed
 JSON shapes suitable for UI consumption.
 """
 import os
+from contextlib import asynccontextmanager
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter(prefix="/api/n8n", tags=["n8n-proxy"])
+
+# Module-level client — reused across requests (connection pooling)
+_http_client: httpx.AsyncClient | None = None
 
 
 def _key() -> str:
@@ -28,20 +32,24 @@ def _webhook_base() -> str:
     return os.getenv("N8N_WEBHOOK_BASE", _base()).rstrip("/")
 
 
-async def _client() -> httpx.AsyncClient:
-    return httpx.AsyncClient(
-        base_url=_base(),
-        headers={"X-N8N-API-KEY": _key()},
-        timeout=15.0,
-    )
+def _client() -> httpx.AsyncClient:
+    """Return the module-level client, creating it lazily if needed."""
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(
+            base_url=_base(),
+            headers={"X-N8N-API-KEY": _key()},
+            timeout=15.0,
+        )
+    return _http_client
 
 
 @router.get("/workflows")
 async def list_workflows():
-    async with await _client() as c:
-        r = await c.get("/api/v1/workflows", params={"limit": 50})
-        r.raise_for_status()
-        body = r.json()
+    c = _client()
+    r = await c.get("/api/v1/workflows", params={"limit": 50})
+    r.raise_for_status()
+    body = r.json()
 
     out = []
     for w in body.get("data", []):
@@ -70,12 +78,12 @@ async def list_workflows():
 
 @router.get("/workflows/{workflow_id}")
 async def get_workflow(workflow_id: str):
-    async with await _client() as c:
-        r = await c.get(f"/api/v1/workflows/{workflow_id}")
-        if r.status_code == 404:
-            raise HTTPException(404, "Workflow not found")
-        r.raise_for_status()
-        return r.json()
+    c = _client()
+    r = await c.get(f"/api/v1/workflows/{workflow_id}")
+    if r.status_code == 404:
+        raise HTTPException(404, "Workflow not found")
+    r.raise_for_status()
+    return r.json()
 
 
 @router.get("/executions")
@@ -83,10 +91,10 @@ async def list_executions(workflow_id: Optional[str] = None, limit: int = 20):
     params: dict = {"limit": limit}
     if workflow_id:
         params["workflowId"] = workflow_id
-    async with await _client() as c:
-        r = await c.get("/api/v1/executions", params=params)
-        r.raise_for_status()
-        body = r.json()
+    c = _client()
+    r = await c.get("/api/v1/executions", params=params)
+    r.raise_for_status()
+    body = r.json()
 
     return [
         {
@@ -104,14 +112,14 @@ async def list_executions(workflow_id: Optional[str] = None, limit: int = 20):
 
 @router.post("/workflows/{workflow_id}/trigger")
 async def trigger_workflow(workflow_id: str, request: Request):
-    """Trigger workflow via its first webhook path, forwarding query params."""
+    """Trigger workflow via its first webhook path, forwarding query params as POST body."""
     params = dict(request.query_params)
-    async with await _client() as c:
-        r = await c.get(f"/api/v1/workflows/{workflow_id}")
-        if r.status_code == 404:
-            raise HTTPException(404, "Workflow not found")
-        r.raise_for_status()
-        w = r.json()
+    c = _client()
+    r = await c.get(f"/api/v1/workflows/{workflow_id}")
+    if r.status_code == 404:
+        raise HTTPException(404, "Workflow not found")
+    r.raise_for_status()
+    w = r.json()
 
     if not w.get("active"):
         raise HTTPException(409, f"Workflow '{w.get('name')}' is not active")
@@ -129,6 +137,6 @@ async def trigger_workflow(workflow_id: str, request: Request):
 
     trigger_url = f"{_base()}/webhook/{webhook_path}"
     async with httpx.AsyncClient(timeout=10.0) as c:
-        r = await c.get(trigger_url, params=params)
+        r = await c.post(trigger_url, json=params)
         r.raise_for_status()
         return {"triggered": True, "url": trigger_url, "response": r.json()}

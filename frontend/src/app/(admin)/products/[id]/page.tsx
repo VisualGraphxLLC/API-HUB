@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type {
-  Customer,
   Product,
   ProductImage,
   Supplier,
@@ -33,7 +32,8 @@ export default function ProductDetailPage() {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [supplier, setSupplier] = useState<Supplier | null>(null);
-  const [loading, setLoading] = useState(true);  const [activeImageTab, setActiveImageTab] = useState<string>("front");
+  const [loading, setLoading] = useState(true);
+  const [activeImageTab, setActiveImageTab] = useState<string>("front");
 
   const fetchData = async () => {
     try {

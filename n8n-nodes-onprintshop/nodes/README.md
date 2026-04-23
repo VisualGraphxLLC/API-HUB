@@ -37,6 +37,7 @@ https://documenter.getpostman.com/view/33263100/2sBXijHWys
 ## Operations
 
 - Queries: Customer/Order/Product/Status/Quote/Store/Department/etc.
+- Product queries include master options/rules, pricing, option pricing, and stock via the `productStocks` query contract.
 - Mutations: Update Order Status, Set Shipment, Set Product catalog entities, Update Product Stock, etc.
 - Some operations are marked Staging/Beta/Test in the Postman collection and may be disabled by OPS support on your instance.
 

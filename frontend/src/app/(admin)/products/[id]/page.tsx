@@ -104,7 +104,7 @@ export default function ProductDetailPage() {
   return (
     <div id="s-product-detail">
 
-      {product.options?.some((o: any) => o.enabled) && (
+      {supplier?.protocol === "ops_graphql" && product.options?.some((o: any) => o.enabled) && (
         <div className="bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-3 mb-4 text-sm text-yellow-900">
           <strong>Options saved to hub.</strong> OPS push is pending beta API — configure manually in OPS admin for now.
         </div>
@@ -130,11 +130,13 @@ export default function ProductDetailPage() {
           </div>
         </div>
         <div className="flex gap-3">
-          <Link href={`/products/${product.id}/options`}>
-            <Button variant="outline" className="border-[#1e4d92] text-[#1e4d92]">
-              Configure Options
-            </Button>
-          </Link>
+          {supplier?.protocol === "ops_graphql" && (
+            <Link href={`/products/${product.id}/options`}>
+              <Button variant="outline" className="border-[#1e4d92] text-[#1e4d92]">
+                Configure Options
+              </Button>
+            </Link>
+          )}
           <PublishButton
             productId={id}
             onDone={() => {

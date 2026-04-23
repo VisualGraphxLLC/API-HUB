@@ -368,6 +368,15 @@ class OnPrintShop {
                     description: 'Automatically fetch all pages until no more records are available (ignores limit/offset)'
                 },
                 {
+                    displayName: 'Product ID',
+                    name: 'productStocks_product_id',
+                    type: 'number',
+                    required: true,
+                    displayOptions: { show: { resource: ['productStocks'], operation: ['getAll'] } },
+                    default: 0,
+                    description: 'Product ID to fetch stock records for',
+                },
+                {
                     displayName: 'Query Parameters',
                     name: 'queryParameters',
                     type: 'collection',
@@ -375,29 +384,11 @@ class OnPrintShop {
                     displayOptions: { show: { resource: ['productStocks'], operation: ['getAll'] } },
                     default: {},
                     options: [
-                        { displayName: 'Product ID', name: 'product_id', type: 'number', default: 0 },
-                        { displayName: 'SKU', name: 'products_sku', type: 'string', default: '' },
                         { displayName: 'Limit', name: 'limit', type: 'number', typeOptions: { minValue: 1, maxValue: 250 }, default: 250 },
                         { displayName: 'Offset', name: 'offset', type: 'number', typeOptions: { minValue: 0 }, default: 0 },
                         { displayName: 'Page Size', name: 'pageSize', type: 'number', typeOptions: { minValue: 1, maxValue: 250 }, default: 250 },
                         { displayName: 'Page Delay (ms)', name: 'pageDelay', type: 'number', typeOptions: { minValue: 25, maxValue: 1000 }, default: 50 },
                     ],
-                },
-                {
-                    displayName: 'Stock Fields',
-                    name: 'stockFields',
-                    type: 'multiOptions',
-                    displayOptions: { show: { resource: ['productStocks'], operation: ['getAll'] } },
-                    options: [
-                        { name: '🔘 Select All Fields', value: 'SELECT_ALL' },
-                        { name: '🔘 Deselect All Fields', value: 'DESELECT_ALL' },
-                        { name: '─────────────────────────────', value: 'SEPARATOR' },
-                        { name: 'Product ID', value: 'product_id' },
-                        { name: 'SKU', value: 'products_sku' },
-                        { name: 'Available Quantity', value: 'available_qty' },
-                        { name: 'Reserved Quantity', value: 'reserved_qty' },
-                    ],
-                    default: ['product_id', 'products_sku', 'available_qty'],
                 },
                 // Status listings (additive)
                 {
@@ -806,7 +797,7 @@ class OnPrintShop {
                     default: 0,
                 },
                 // Mutations (additive)
-                // NOTE: "Update Product Stock" was removed — it used a stale contract. Use "Product > Update Stock" instead.
+                // NOTE: Prefer "Product > Update Stock" for inventory updates; "Mutation > Update Product Stock" exists to mirror the official Postman collection.
                 {
                     displayName: 'Operation',
                     name: 'operation',
@@ -4539,8 +4530,8 @@ class OnPrintShop {
                     type: 'multiOptions',
                     displayOptions: {
                         show: {
-                            resource: ['product'],
-                            operation: ['getStock'],
+                            resource: ['product', 'productStocks'],
+                            operation: ['getStock', 'getAll'],
                         },
                     },
                     options: [
@@ -4729,12 +4720,20 @@ class OnPrintShop {
                         { name: 'Formula', value: 'formula' },
                         { name: 'Weight Setting', value: 'weight_setting' },
                         { name: 'Price Range Lookup', value: 'price_range_lookup' },
-                        { name: 'Custom Lookup', value: 'custom_lookup' },
                         { name: 'Additional Lookup Details', value: 'additional_lookup_details' },
                         { name: 'Hide From Calc', value: 'hide_from_calc' },
                         { name: 'Enable Assoc Qty', value: 'enable_assoc_qty' },
                         { name: 'Allow Price Cal', value: 'allow_price_cal' },
                         { name: 'Hire Designer Option', value: 'hire_designer_option' },
+                        { name: 'Required', value: 'required' },
+                        { name: 'Display In Calculator', value: 'display_in_calculator' },
+                        { name: 'Option Position', value: 'option_position' },
+                        { name: 'Desc Position', value: 'desc_position' },
+                        { name: 'Display Above Size', value: 'display_above_size' },
+                        { name: 'Presentation Group', value: 'presentation_group' },
+                        { name: 'Export Group ID', value: 'prod_add_opt_export_group_id' },
+                        { name: 'Exclude Setup Cost Reorder', value: 'exclude_setup_cost_reorder' },
+                        { name: 'Master Option Tag', value: 'master_option_tag' },
                         { name: 'Attributes', value: 'attributes' },
                     ],
                     default: [
@@ -4746,6 +4745,25 @@ class OnPrintShop {
                         'status',
                         'sort_order',
                         'options_type',
+                        'linear_formula',
+                        'formula',
+                        'weight_setting',
+                        'price_range_lookup',
+                        'additional_lookup_details',
+                        'hide_from_calc',
+                        'enable_assoc_qty',
+                        'allow_price_cal',
+                        'hire_designer_option',
+                        'required',
+                        'display_in_calculator',
+                        'option_position',
+                        'desc_position',
+                        'display_above_size',
+                        'presentation_group',
+                        'prod_add_opt_export_group_id',
+                        'exclude_setup_cost_reorder',
+                        'master_option_tag',
+                        'attributes',
                     ],
                     description: 'Select master options fields to return. All fields selected by default.',
                 },
@@ -4813,12 +4831,20 @@ class OnPrintShop {
                         { name: 'Formula', value: 'formula' },
                         { name: 'Weight Setting', value: 'weight_setting' },
                         { name: 'Price Range Lookup', value: 'price_range_lookup' },
-                        { name: 'Custom Lookup', value: 'custom_lookup' },
                         { name: 'Additional Lookup Details', value: 'additional_lookup_details' },
                         { name: 'Hide From Calc', value: 'hide_from_calc' },
                         { name: 'Enable Assoc Qty', value: 'enable_assoc_qty' },
                         { name: 'Allow Price Cal', value: 'allow_price_cal' },
                         { name: 'Hire Designer Option', value: 'hire_designer_option' },
+                        { name: 'Required', value: 'required' },
+                        { name: 'Display In Calculator', value: 'display_in_calculator' },
+                        { name: 'Option Position', value: 'option_position' },
+                        { name: 'Desc Position', value: 'desc_position' },
+                        { name: 'Display Above Size', value: 'display_above_size' },
+                        { name: 'Presentation Group', value: 'presentation_group' },
+                        { name: 'Export Group ID', value: 'prod_add_opt_export_group_id' },
+                        { name: 'Exclude Setup Cost Reorder', value: 'exclude_setup_cost_reorder' },
+                        { name: 'Master Option Tag', value: 'master_option_tag' },
                         { name: 'Attributes', value: 'attributes' },
                     ],
                     default: [
@@ -4830,6 +4856,25 @@ class OnPrintShop {
                         'status',
                         'sort_order',
                         'options_type',
+                        'linear_formula',
+                        'formula',
+                        'weight_setting',
+                        'price_range_lookup',
+                        'additional_lookup_details',
+                        'hide_from_calc',
+                        'enable_assoc_qty',
+                        'allow_price_cal',
+                        'hire_designer_option',
+                        'required',
+                        'display_in_calculator',
+                        'option_position',
+                        'desc_position',
+                        'display_above_size',
+                        'presentation_group',
+                        'prod_add_opt_export_group_id',
+                        'exclude_setup_cost_reorder',
+                        'master_option_tag',
+                        'attributes',
                     ],
                     description: 'Select master options fields to return. All fields selected by default.',
                 },
@@ -4867,17 +4912,25 @@ class OnPrintShop {
                         { name: 'Rule ID', value: 'rule_id' },
                         { name: 'Rule Name', value: 'rule_name' },
                         { name: 'Rule Type', value: 'rule_type' },
-                        { name: 'Condition', value: 'condition' },
-                        { name: 'Action', value: 'action' },
+                        { name: 'Source Option Attribute IDs', value: 'source_option_attribute_ids' },
+                        { name: 'Hide Option IDs', value: 'hide_option_ids' },
+                        { name: 'Hide Option Attribute IDs', value: 'hide_option_attribute_ids' },
+                        { name: 'Status', value: 'status' },
                         { name: 'Sort Order', value: 'sort_order' },
+                        { name: 'Comparison Value', value: 'comparison_value' },
+                        { name: 'Disabled For Admin', value: 'disabled_for_admin' },
                     ],
                     default: [
                         'rule_id',
                         'rule_name',
                         'rule_type',
-                        'condition',
-                        'action',
+                        'source_option_attribute_ids',
+                        'hide_option_ids',
+                        'hide_option_attribute_ids',
+                        'status',
                         'sort_order',
+                        'comparison_value',
+                        'disabled_for_admin',
                     ],
                     description: 'Select options rules fields to return. All fields selected by default.',
                 },
@@ -4936,17 +4989,25 @@ class OnPrintShop {
                         { name: 'Rule ID', value: 'rule_id' },
                         { name: 'Rule Name', value: 'rule_name' },
                         { name: 'Rule Type', value: 'rule_type' },
-                        { name: 'Condition', value: 'condition' },
-                        { name: 'Action', value: 'action' },
+                        { name: 'Source Option Attribute IDs', value: 'source_option_attribute_ids' },
+                        { name: 'Hide Option IDs', value: 'hide_option_ids' },
+                        { name: 'Hide Option Attribute IDs', value: 'hide_option_attribute_ids' },
+                        { name: 'Status', value: 'status' },
                         { name: 'Sort Order', value: 'sort_order' },
+                        { name: 'Comparison Value', value: 'comparison_value' },
+                        { name: 'Disabled For Admin', value: 'disabled_for_admin' },
                     ],
                     default: [
                         'rule_id',
                         'rule_name',
                         'rule_type',
-                        'condition',
-                        'action',
+                        'source_option_attribute_ids',
+                        'hide_option_ids',
+                        'hide_option_attribute_ids',
+                        'status',
                         'sort_order',
+                        'comparison_value',
+                        'disabled_for_admin',
                     ],
                     description: 'Select options rules fields to return. All fields selected by default.',
                 },
@@ -4981,24 +5042,24 @@ class OnPrintShop {
                         { name: '🔘 Select All Fields', value: 'SELECT_ALL' },
                         { name: '🔘 Deselect All Fields', value: 'DESELECT_ALL' },
                         { name: '─────────────────────────────', value: 'SEPARATOR' },
-                        { name: 'Price ID', value: 'price_id' },
-                        { name: 'Price Type', value: 'price_type' },
-                        { name: 'Price Value', value: 'price_value' },
-                        { name: 'Currency', value: 'currency' },
-                        { name: 'Minimum Quantity', value: 'min_quantity' },
-                        { name: 'Maximum Quantity', value: 'max_quantity' },
-                        { name: 'Valid From', value: 'valid_from' },
-                        { name: 'Valid To', value: 'valid_to' },
+                        { name: 'Size ID', value: 'size_id' },
+                        { name: 'Price', value: 'price' },
+                        { name: 'Vendor Price', value: 'vendor_price' },
+                        { name: 'Qty From', value: 'qty_from' },
+                        { name: 'Qty To', value: 'qty_to' },
+                        { name: 'Products ID', value: 'products_id' },
+                        { name: 'User Type ID', value: 'user_type_id' },
+                        { name: 'Corporate ID', value: 'corporate_id' },
                     ],
                     default: [
-                        'price_id',
-                        'price_type',
-                        'price_value',
-                        'currency',
-                        'min_quantity',
-                        'max_quantity',
-                        'valid_from',
-                        'valid_to',
+                        'size_id',
+                        'price',
+                        'vendor_price',
+                        'qty_from',
+                        'qty_to',
+                        'products_id',
+                        'user_type_id',
+                        'corporate_id',
                     ],
                     description: 'Select prices fields to return. All fields selected by default.',
                 },
@@ -5054,24 +5115,24 @@ class OnPrintShop {
                         { name: '🔘 Select All Fields', value: 'SELECT_ALL' },
                         { name: '🔘 Deselect All Fields', value: 'DESELECT_ALL' },
                         { name: '─────────────────────────────', value: 'SEPARATOR' },
-                        { name: 'Price ID', value: 'price_id' },
-                        { name: 'Price Type', value: 'price_type' },
-                        { name: 'Price Value', value: 'price_value' },
-                        { name: 'Currency', value: 'currency' },
-                        { name: 'Minimum Quantity', value: 'min_quantity' },
-                        { name: 'Maximum Quantity', value: 'max_quantity' },
-                        { name: 'Valid From', value: 'valid_from' },
-                        { name: 'Valid To', value: 'valid_to' },
+                        { name: 'Size ID', value: 'size_id' },
+                        { name: 'Price', value: 'price' },
+                        { name: 'Vendor Price', value: 'vendor_price' },
+                        { name: 'Qty From', value: 'qty_from' },
+                        { name: 'Qty To', value: 'qty_to' },
+                        { name: 'Products ID', value: 'products_id' },
+                        { name: 'User Type ID', value: 'user_type_id' },
+                        { name: 'Corporate ID', value: 'corporate_id' },
                     ],
                     default: [
-                        'price_id',
-                        'price_type',
-                        'price_value',
-                        'currency',
-                        'min_quantity',
-                        'max_quantity',
-                        'valid_from',
-                        'valid_to',
+                        'size_id',
+                        'price',
+                        'vendor_price',
+                        'qty_from',
+                        'qty_to',
+                        'products_id',
+                        'user_type_id',
+                        'corporate_id',
                     ],
                     description: 'Select prices fields to return. All fields selected by default.',
                 },
@@ -5106,22 +5167,22 @@ class OnPrintShop {
                         { name: '🔘 Select All Fields', value: 'SELECT_ALL' },
                         { name: '🔘 Deselect All Fields', value: 'DESELECT_ALL' },
                         { name: '─────────────────────────────', value: 'SEPARATOR' },
-                        { name: 'Option Price ID', value: 'option_price_id' },
                         { name: 'Attribute ID', value: 'attr_id' },
-                        { name: 'Option Value', value: 'option_value' },
-                        { name: 'Price Adjustment', value: 'price_adjustment' },
-                        { name: 'Price Adjustment Type', value: 'price_adjustment_type' },
-                        { name: 'Currency', value: 'currency' },
-                        { name: 'Sort Order', value: 'sort_order' },
+                        { name: 'Range ID', value: 'range_id' },
+                        { name: 'Price', value: 'price' },
+                        { name: 'Vendor Price', value: 'vendor_price' },
+                        { name: 'From Range', value: 'from_range' },
+                        { name: 'To Range', value: 'to_range' },
+                        { name: 'Site Admin Markup', value: 'site_admin_markup' },
                     ],
                     default: [
-                        'option_price_id',
                         'attr_id',
-                        'option_value',
-                        'price_adjustment',
-                        'price_adjustment_type',
-                        'currency',
-                        'sort_order',
+                        'range_id',
+                        'price',
+                        'vendor_price',
+                        'from_range',
+                        'to_range',
+                        'site_admin_markup',
                     ],
                     description: 'Select option prices fields to return. All fields selected by default.',
                 },
@@ -5177,22 +5238,22 @@ class OnPrintShop {
                         { name: '🔘 Select All Fields', value: 'SELECT_ALL' },
                         { name: '🔘 Deselect All Fields', value: 'DESELECT_ALL' },
                         { name: '─────────────────────────────', value: 'SEPARATOR' },
-                        { name: 'Option Price ID', value: 'option_price_id' },
                         { name: 'Attribute ID', value: 'attr_id' },
-                        { name: 'Option Value', value: 'option_value' },
-                        { name: 'Price Adjustment', value: 'price_adjustment' },
-                        { name: 'Price Adjustment Type', value: 'price_adjustment_type' },
-                        { name: 'Currency', value: 'currency' },
-                        { name: 'Sort Order', value: 'sort_order' },
+                        { name: 'Range ID', value: 'range_id' },
+                        { name: 'Price', value: 'price' },
+                        { name: 'Vendor Price', value: 'vendor_price' },
+                        { name: 'From Range', value: 'from_range' },
+                        { name: 'To Range', value: 'to_range' },
+                        { name: 'Site Admin Markup', value: 'site_admin_markup' },
                     ],
                     default: [
-                        'option_price_id',
                         'attr_id',
-                        'option_value',
-                        'price_adjustment',
-                        'price_adjustment_type',
-                        'currency',
-                        'sort_order',
+                        'range_id',
+                        'price',
+                        'vendor_price',
+                        'from_range',
+                        'to_range',
+                        'site_admin_markup',
                     ],
                     description: 'Select option prices fields to return. All fields selected by default.',
                 },
@@ -6163,15 +6224,23 @@ class OnPrintShop {
                     }
                 }
                 if (resource === 'productStocks' && operation === 'getAll') {
+                    const productId = this.getNodeParameter('productStocks_product_id', i);
+                    if (!productId) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Product ID is required');
+                    }
                     const queryParameters = this.getNodeParameter('queryParameters', i);
                     const stockFieldsSelected = this.getNodeParameter('stockFields', i);
                     const fetchAllPages = this.getNodeParameter('fetchAllPages', i, false) || false;
-                    const stockFields = stockFieldsSelected.filter(f => !f.startsWith('SELECT_') && f !== 'DESELECT_ALL' && f !== 'SEPARATOR').join('\n\t\t\t\t\t\t\t');
+                    const stockFields = stockFieldsSelected
+                        .filter(f => !f.startsWith('SELECT_') && !f.startsWith('DESELECT_') && f !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t\t');
                     const query = `
-						query products ($product_id: Int, $products_sku: String, $limit: Int, $offset: Int) {
-							products (product_id: $product_id, products_sku: $products_sku, limit: $limit, offset: $offset) {
-								products { stock_detail { ${stockFields} } }
-								totalProducts
+						query productStocks ($product_id: Int!, $limit: Int, $offset: Int) {
+							productStocks (product_id: $product_id, limit: $limit, offset: $offset) {
+								productStocks {
+									${stockFields}
+								}
+								totalProductStocks
 							}
 						}
 					`;
@@ -6185,22 +6254,15 @@ class OnPrintShop {
                     if (fetchAllPages) {
                         while (hasMorePages && pageCount < maxPages) {
                             const requestStartTime = Date.now();
-                            const variables = { limit: pageSize, offset };
-                            const qp = queryParameters || {};
-                            if (qp.product_id)
-                                variables.product_id = Number(qp.product_id);
-                            if (qp.products_sku)
-                                variables.products_sku = String(qp.products_sku);
+                            const variables = { product_id: productId, limit: pageSize, offset };
                             const responseData = await this.helpers.request({ method: 'POST', url: `${baseUrl}/api/`, headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: { query: query.trim(), variables }, json: true });
-                            if (responseData && responseData.data && responseData.data.products) {
-                                const products = responseData.data.products.products || [];
-                                for (const p of products) {
-                                    if (p && p.stock_detail)
-                                        results.push(p.stock_detail);
-                                }
+                            if (responseData && responseData.data && responseData.data.productStocks) {
+                                const stocks = responseData.data.productStocks.productStocks || [];
+                                for (const s of stocks)
+                                    results.push({ ...s, _totalProductStocks: responseData.data.productStocks.totalProductStocks });
                                 offset += pageSize;
                                 pageCount++;
-                                hasMorePages = products.length === pageSize;
+                                hasMorePages = stocks.length === pageSize;
                                 const responseTime = Date.now() - requestStartTime;
                                 if (responseTime < 100)
                                     adaptiveDelay = Math.max(25, adaptiveDelay * 0.8);
@@ -6219,21 +6281,16 @@ class OnPrintShop {
                         returnData.push(...results);
                     }
                     else {
-                        const variables = {};
-                        if (queryParameters.product_id)
-                            variables.product_id = Number(queryParameters.product_id);
-                        if (queryParameters.products_sku)
-                            variables.products_sku = String(queryParameters.products_sku);
+                        const variables = { product_id: productId };
                         if (queryParameters.limit)
                             variables.limit = queryParameters.limit;
                         if (queryParameters.offset)
                             variables.offset = queryParameters.offset;
                         const responseData = await this.helpers.request({ method: 'POST', url: `${baseUrl}/api/`, headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: { query: query.trim(), variables }, json: true });
-                        if (responseData && responseData.data && responseData.data.products) {
-                            const products = responseData.data.products.products || [];
-                            for (const p of products) {
-                                if (p && p.stock_detail)
-                                    returnData.push(p.stock_detail);
+                        if (responseData && responseData.data && responseData.data.productStocks) {
+                            const stocks = responseData.data.productStocks.productStocks || [];
+                            for (const s of stocks) {
+                                returnData.push({ ...s, _totalProductStocks: responseData.data.productStocks.totalProductStocks });
                             }
                         }
                         else if (responseData && responseData.errors) {
@@ -8587,7 +8644,7 @@ class OnPrintShop {
                 if (resource === 'product' && operation === 'getMasterOptions') {
                     // Get product master options
                     const masterOptionIdStr = this.getNodeParameter('masterOptionId', i);
-                    const selectedFields = this.getNodeParameter('masterOptionsFields', i, []);
+                    const selectedFields = this.getNodeParameter('masterOptionsFields', i);
                     // Validate Master Option ID is provided
                     if (!masterOptionIdStr || masterOptionIdStr.trim() === '') {
                         throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Master Option ID is required for Get Master Options operation');
@@ -8602,7 +8659,12 @@ class OnPrintShop {
                         master_option_id: masterOptionId,
                     };
                     // Build fields string from selected fields
-                    const fieldsString = selectedFields.length > 0 ? selectedFields.join('\n\t\t\t\t\t\t') : 'master_option_id\ntitle\ndescription\noption_key\npricing_method\nstatus\nsort_order\noptions_type\nlinear_formula\nformula\nweight_setting\nprice_range_lookup\ncustom_lookup\nadditional_lookup_details\nhide_from_calc\nenable_assoc_qty\nallow_price_cal\nhire_designer_option\nattributes';
+                    const fieldsString = selectedFields
+                        .filter(field => !field.startsWith('SELECT_ALL') && !field.startsWith('DESELECT_ALL') && field !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t');
+                    if (!fieldsString) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Select at least one Master Options Field');
+                    }
                     // Build the GraphQL query for product master options
                     const query = `
 						query product_master_options ($master_option_id: Int!) {
@@ -8661,7 +8723,7 @@ class OnPrintShop {
                 if (resource === 'product' && operation === 'getManyMasterOptions') {
                     // Get master options for many products
                     const queryParameters = this.getNodeParameter('queryParametersManyMasterOptions', i);
-                    const selectedFields = this.getNodeParameter('masterOptionsFieldsMany', i, []);
+                    const selectedFields = this.getNodeParameter('masterOptionsFieldsMany', i);
                     // Build variables object
                     const variables = {};
                     if (queryParameters.master_option_id)
@@ -8671,7 +8733,12 @@ class OnPrintShop {
                     if (queryParameters.offset)
                         variables.offset = queryParameters.offset;
                     // Build fields string from selected fields
-                    const fieldsString = selectedFields.length > 0 ? selectedFields.join('\n\t\t\t\t\t\t') : 'master_option_id\ntitle\ndescription\noption_key\npricing_method\nstatus\nsort_order\noptions_type\nlinear_formula\nformula\nweight_setting\nprice_range_lookup\ncustom_lookup\nadditional_lookup_details\nhide_from_calc\nenable_assoc_qty\nallow_price_cal\nhire_designer_option\nattributes';
+                    const fieldsString = selectedFields
+                        .filter(field => !field.startsWith('SELECT_ALL') && !field.startsWith('DESELECT_ALL') && field !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t');
+                    if (!fieldsString) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Select at least one Master Options Field');
+                    }
                     // Build the GraphQL query for many product master options
                     const query = `
 					query product_master_options ($master_option_id: Int, $limit: Int, $offset: Int) {
@@ -8729,6 +8796,7 @@ class OnPrintShop {
                 if (resource === 'product' && operation === 'getOptionsRules') {
                     // Get product options rules
                     const ruleIdStr = this.getNodeParameter('ruleId', i);
+                    const optionsRulesFieldsSelected = this.getNodeParameter('optionsRulesFields', i);
                     // Validate Rule ID is provided
                     if (!ruleIdStr || ruleIdStr.trim() === '') {
                         throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Rule ID is required for Get Options Rules operation');
@@ -8742,21 +8810,18 @@ class OnPrintShop {
                     const variables = {
                         rule_id: ruleId,
                     };
+                    const optionsRulesFields = optionsRulesFieldsSelected
+                        .filter(field => !field.startsWith('SELECT_ALL') && !field.startsWith('DESELECT_ALL') && field !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t\t\t\t');
+                    if (!optionsRulesFields) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Select at least one Options Rules Field');
+                    }
                     // Build the GraphQL query for product options rules
                     const query = `
 						query product_option_rules ($rule_id: Int!) {
 							product_option_rules (rule_id: $rule_id) {
 								product_option_rules {
-									rule_id
-									rule_name
-									rule_type
-									source_option_attribute_ids
-									hide_option_ids
-									hide_option_attribute_ids
-									status
-									sort_order
-									comparison_value
-									disabled_for_admin
+									${optionsRulesFields}
 								}
 								total_product_option_rules
 							}
@@ -8809,29 +8874,30 @@ class OnPrintShop {
                 if (resource === 'product' && operation === 'getManyOptionsRules') {
                     // Get options rules for many products
                     const queryParameters = this.getNodeParameter('queryParametersManyOptionsRules', i);
+                    const optionsRulesFieldsSelected = this.getNodeParameter('optionsRulesFieldsMany', i);
                     // Build variables object
                     const variables = {};
-                    if (queryParameters.rule_id)
-                        variables.rule_id = parseInt(queryParameters.rule_id, 10);
+                    if (queryParameters.rule_id) {
+                        const parsedRuleId = parseInt(queryParameters.rule_id, 10);
+                        if (!isNaN(parsedRuleId))
+                            variables.rule_id = parsedRuleId;
+                    }
                     if (queryParameters.limit)
                         variables.limit = queryParameters.limit;
                     if (queryParameters.offset)
                         variables.offset = queryParameters.offset;
+                    const optionsRulesFields = optionsRulesFieldsSelected
+                        .filter(field => !field.startsWith('SELECT_ALL') && !field.startsWith('DESELECT_ALL') && field !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t\t\t\t');
+                    if (!optionsRulesFields) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Select at least one Options Rules Field');
+                    }
                     // Build the GraphQL query for many product options rules
                     const query = `
 					query product_option_rules ($rule_id: Int, $limit: Int, $offset: Int) {
 						product_option_rules (rule_id: $rule_id, limit: $limit, offset: $offset) {
 							product_option_rules {
-								rule_id
-								rule_name
-								rule_type
-								source_option_attribute_ids
-								hide_option_ids
-								hide_option_attribute_ids
-								status
-								sort_order
-								comparison_value
-								disabled_for_admin
+								${optionsRulesFields}
 							}
 							total_product_option_rules
 						}
@@ -8883,6 +8949,7 @@ class OnPrintShop {
                 if (resource === 'product' && operation === 'getPrices') {
                     // Get product pricing information
                     const productUuidStr = this.getNodeParameter('productIdPrices', i);
+                    const pricesFieldsSelected = this.getNodeParameter('pricesFields', i);
                     // Validate Product UUID is provided
                     if (!productUuidStr || productUuidStr.trim() === '') {
                         throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Product UUID is required for Get Product Prices operation');
@@ -8891,14 +8958,20 @@ class OnPrintShop {
                     const variables = {
                         product_uuid: productUuidStr,
                     };
+                    const pricesFields = pricesFieldsSelected
+                        .filter(field => !field.startsWith('SELECT_ALL') && !field.startsWith('DESELECT_ALL') && field !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t\t\t\t');
+                    if (!pricesFields) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Select at least one Prices Field');
+                    }
                     // Build the GraphQL query for product prices
                     const query = `
 					query product_price ($product_uuid: String!) {
 						product_price (product_uuid: $product_uuid) {
 							product_price {
-								size_id
-								price
+								${pricesFields}
 							}
+							total_product_price
 						}
 					}
 				`;
@@ -8920,20 +8993,30 @@ class OnPrintShop {
                     if (responseData && responseData.data && responseData.data.product_price) {
                         const response = responseData.data.product_price;
                         const productPrices = response.product_price;
+                        const totalProductPrice = response.total_product_price;
                         if (Array.isArray(productPrices)) {
                             productPrices.forEach((price) => {
                                 returnData.push({
                                     ...price,
                                     _operation: 'getPrices',
                                     _productUuid: productUuidStr,
+                                    _totalProductPrice: totalProductPrice,
                                 });
                             });
                         }
-                        else {
+                        else if (productPrices) {
                             returnData.push({
                                 ...productPrices,
                                 _operation: 'getPrices',
                                 _productUuid: productUuidStr,
+                                _totalProductPrice: totalProductPrice,
+                            });
+                        }
+                        else {
+                            returnData.push({
+                                _operation: 'getPrices',
+                                _productUuid: productUuidStr,
+                                _totalProductPrice: totalProductPrice,
                             });
                         }
                     }
@@ -8947,6 +9030,7 @@ class OnPrintShop {
                 if (resource === 'product' && operation === 'getManyPrices') {
                     // Get prices for many products
                     const queryParameters = this.getNodeParameter('queryParametersManyPrices', i);
+                    const pricesFieldsSelected = this.getNodeParameter('pricesFieldsMany', i);
                     // Build variables object
                     const variables = {};
                     if (queryParameters.product_uuid)
@@ -8955,14 +9039,20 @@ class OnPrintShop {
                         variables.limit = queryParameters.limit;
                     if (queryParameters.offset)
                         variables.offset = queryParameters.offset;
+                    const pricesFields = pricesFieldsSelected
+                        .filter(field => !field.startsWith('SELECT_ALL') && !field.startsWith('DESELECT_ALL') && field !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t\t\t\t');
+                    if (!pricesFields) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Select at least one Prices Field');
+                    }
                     // Build the GraphQL query for many product prices
                     const query = `
 					query product_price ($product_uuid: String, $limit: Int, $offset: Int) {
 						product_price (product_uuid: $product_uuid, limit: $limit, offset: $offset) {
 							product_price {
-								size_id
-								price
+								${pricesFields}
 							}
+							total_product_price
 						}
 					}
 				`;
@@ -8984,18 +9074,27 @@ class OnPrintShop {
                     if (responseData && responseData.data && responseData.data.product_price) {
                         const response = responseData.data.product_price;
                         const productPrices = response.product_price;
+                        const totalProductPrice = response.total_product_price;
                         if (Array.isArray(productPrices)) {
                             productPrices.forEach((price) => {
                                 returnData.push({
                                     ...price,
                                     _operation: 'getManyPrices',
+                                    _totalProductPrice: totalProductPrice,
                                 });
+                            });
+                        }
+                        else if (productPrices) {
+                            returnData.push({
+                                ...productPrices,
+                                _operation: 'getManyPrices',
+                                _totalProductPrice: totalProductPrice,
                             });
                         }
                         else {
                             returnData.push({
-                                ...productPrices,
                                 _operation: 'getManyPrices',
+                                _totalProductPrice: totalProductPrice,
                             });
                         }
                     }
@@ -9010,6 +9109,7 @@ class OnPrintShop {
                 if (resource === 'product' && operation === 'getOptionPrices') {
                     // Get product option pricing information
                     const attrIdStr = this.getNodeParameter('productIdOptionPrices', i);
+                    const optionPricesFieldsSelected = this.getNodeParameter('optionPricesFields', i);
                     // Validate Attribute ID is provided
                     if (!attrIdStr || attrIdStr.trim() === '') {
                         throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Attribute ID is required for Get Product Option Prices operation');
@@ -9023,17 +9123,18 @@ class OnPrintShop {
                     const variables = {
                         attr_id: attrId,
                     };
+                    const optionPricesFields = optionPricesFieldsSelected
+                        .filter(field => !field.startsWith('SELECT_ALL') && !field.startsWith('DESELECT_ALL') && field !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t\t\t\t');
+                    if (!optionPricesFields) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Select at least one Option Prices Field');
+                    }
                     // Build the GraphQL query for product option prices
                     const query = `
 						query product_options_price ($attr_id: Int!) {
 							product_options_price (attr_id: $attr_id) {
 								product_options_price {
-									attr_id
-									price
-									vendor_price
-									from_range
-									to_range
-									site_admin_markup
+									${optionPricesFields}
 								}
 								total_product_option_price
 							}
@@ -9086,25 +9187,30 @@ class OnPrintShop {
                 if (resource === 'product' && operation === 'getManyOptionPrices') {
                     // Get option prices for many products
                     const queryParameters = this.getNodeParameter('queryParametersManyOptionPrices', i);
+                    const optionPricesFieldsSelected = this.getNodeParameter('optionPricesFieldsMany', i);
                     // Build variables object
                     const variables = {};
-                    if (queryParameters.attr_id)
-                        variables.attr_id = parseInt(queryParameters.attr_id, 10);
+                    if (queryParameters.attr_id) {
+                        const parsedAttrId = parseInt(queryParameters.attr_id, 10);
+                        if (!isNaN(parsedAttrId))
+                            variables.attr_id = parsedAttrId;
+                    }
                     if (queryParameters.limit)
                         variables.limit = queryParameters.limit;
                     if (queryParameters.offset)
                         variables.offset = queryParameters.offset;
+                    const optionPricesFields = optionPricesFieldsSelected
+                        .filter(field => !field.startsWith('SELECT_ALL') && !field.startsWith('DESELECT_ALL') && field !== 'SEPARATOR')
+                        .join('\n\t\t\t\t\t\t\t\t\t');
+                    if (!optionPricesFields) {
+                        throw new n8n_workflow_1.NodeOperationError(this.getNode(), 'Select at least one Option Prices Field');
+                    }
                     // Build the GraphQL query for many product option prices
                     const query = `
 					query product_options_price ($attr_id: Int, $limit: Int, $offset: Int) {
 						product_options_price (attr_id: $attr_id, limit: $limit, offset: $offset) {
 							product_options_price {
-								attr_id
-								price
-								vendor_price
-								from_range
-								to_range
-								site_admin_markup
+								${optionPricesFields}
 							}
 							total_product_option_price
 						}

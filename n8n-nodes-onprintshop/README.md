@@ -36,7 +36,7 @@ The node groups operations by **Resource**.
 - **Order Shipment**: Get Many (with pagination helpers)
 - **Ship To Multiple**: Get Many (by `order_id`, per OPS query contract)
 - **Product**: Get Simple/Detailed (single/many), master options/rules/prices, categories, FAQs, stocks, plus catalog helpers (tags/groups/formulas/ranges)
-- **Product Stocks**: Get Many (with pagination helpers)
+- **Product Stocks**: Get Many (requires `product_id`, per OPS `productStocks` query contract)
 - **Status**: Get / Get Many
 - **Batch**: Get Many
 - **Quote**: Get Many

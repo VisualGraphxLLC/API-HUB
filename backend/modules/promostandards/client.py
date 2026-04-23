@@ -332,56 +332,79 @@ class PromoStandardsClient:
         for inv_record in _as_list(inv_root):
             rec_pid = _text(_attr(inv_record, "productId")) or product_id
             parts_container = _attr(
-                inv_record, "PartInventoryArray", "partInventoryArray", "ProductVariationInventoryArray"
+                inv_record,
+                "PartInventoryArray",
+                "partInventoryArray",
+                "ProductVariationInventoryArray",
             )
-            part_items = _as_list(_attr(parts_container, "PartInventory", "partInventory", "ProductVariationInventory"))
+            part_items = _as_list(
+                _attr(
+                    parts_container,
+                    "PartInventory",
+                    "partInventory",
+                    "ProductVariationInventory",
+                )
+            )
             for part in part_items:
                 part_id = _text(_attr(part, "partId", "part_id"))
                 if not part_id:
                     continue
-                
-                loc_container = _attr(
-                    part, "InventoryLocationArray", "inventoryLocationArray"
-                )
-                locs = _as_list(_attr(loc_container, "InventoryLocation", "inventoryLocation"))
-                
-                total_qty = 0
-                max_loc_qty = -1
-                primary_warehouse = None
-
-                if locs:
-                    for loc in locs:
-                        qty_container = _attr(loc, "inventoryLocationQuantity")
-                        if qty_container:
-                            qty_obj = _attr(qty_container, "Quantity", "quantity")
-                            val = _attr(qty_obj, "value") if qty_obj else None
-                        else:
-                            val = _attr(loc, "quantityAvailable") # fallback
-                            
-                        qty = self._coerce_int(val)
-                        total_qty += qty
-                        if qty > max_loc_qty:
-                            max_loc_qty = qty
-                            primary_warehouse = _text(_attr(loc, "inventoryLocationName", "name"))
-                    qty = total_qty
-                    warehouse = primary_warehouse
-                else:
-                    # Fallback to root level quantityAvailable if locs not present
-                    raw_qty = _attr(part, "quantityAvailable", "quantity")
-                    if raw_qty and hasattr(raw_qty, "Quantity"):
-                        qty = self._coerce_int(_attr(raw_qty.Quantity, "value"))
-                    elif raw_qty and isinstance(raw_qty, dict) and "Quantity" in raw_qty:
-                        qty = self._coerce_int(_attr(raw_qty["Quantity"], "value"))
-                    else:
-                        qty = self._coerce_int(raw_qty)
-                    warehouse = None
-
+                qty, warehouse = self._extract_inventory_qty_and_warehouse(part)
                 yield PSInventoryLevel(
                     product_id=rec_pid,
                     part_id=part_id,
                     quantity_available=qty,
                     warehouse_code=warehouse,
                 )
+
+    def _extract_inventory_qty_and_warehouse(self, part: Any) -> tuple[int, str | None]:
+        """Return (total_quantity, primary_warehouse_name) for one part.
+
+        SanMar nests qty as ``<quantityAvailable><Quantity><value>N</value></Quantity></quantityAvailable>``
+        and repeats ``<InventoryLocation>`` with its own ``<inventoryLocationQuantity>``.
+        Aggregate across locations when per-location quantities are present;
+        otherwise fall back to the top-level ``quantityAvailable``. Primary
+        warehouse is the highest-stock location.
+        """
+        loc_container = _attr(part, "InventoryLocationArray", "inventoryLocationArray")
+        locs = _as_list(_attr(loc_container, "InventoryLocation", "inventoryLocation"))
+
+        best_qty = -1
+        best_name: str | None = None
+        sum_qty = 0
+        any_location_qty = False
+        for loc in locs:
+            loc_qty_wrapper = _attr(loc, "inventoryLocationQuantity")
+            quantity_obj = _attr(loc_qty_wrapper, "Quantity", "quantity") if loc_qty_wrapper else None
+            loc_qty_raw = _attr(quantity_obj, "value") if quantity_obj else None
+            if loc_qty_raw is None:
+                continue
+            any_location_qty = True
+            loc_qty = self._coerce_int(loc_qty_raw)
+            sum_qty += loc_qty
+            if loc_qty > best_qty:
+                best_qty = loc_qty
+                best_name = _text(
+                    _attr(loc, "inventoryLocationName", "inventoryLocationId", "name")
+                )
+
+        if any_location_qty:
+            return sum_qty, best_name
+
+        # No per-location quantities — use top-level quantityAvailable.
+        qty_container = _attr(part, "quantityAvailable", "quantity")
+        nested_q = _attr(qty_container, "Quantity") if qty_container is not None else None
+        if nested_q is not None:
+            qty = self._coerce_int(_attr(nested_q, "value"))
+        else:
+            qty = self._coerce_int(qty_container)
+
+        warehouse_name: str | None = None
+        if locs:
+            warehouse_name = _text(
+                _attr(locs[0], "inventoryLocationName", "inventoryLocationId", "name")
+            )
+        return qty, warehouse_name
 
     @staticmethod
     def _coerce_int(value: Any) -> int:

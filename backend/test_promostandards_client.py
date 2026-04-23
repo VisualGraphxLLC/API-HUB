@@ -178,7 +178,14 @@ async def test_products_batch_skips_individual_failures():
 # get_inventory
 # ---------------------------------------------------------------------------
 
-async def test_inventory_cap_and_shape():
+async def test_inventory_flat_quantity_still_parses():
+    """Backwards compat: flat-int quantityAvailable + location-name-only shape.
+
+    Historically the client capped at 500; that cap is removed (SanMar reports
+    up to 3000 per warehouse × 8 warehouses). Location metadata with no qty
+    falls back to top-level quantityAvailable; warehouse_name comes from the
+    first location entry.
+    """
     svc = FakeService()
     svc.responses[("getInventoryLevels", "PC61")] = NS(
         Inventory=NS(
@@ -194,7 +201,7 @@ async def test_inventory_cap_and_shape():
                     ),
                     NS(
                         partId="PC61-NVY-L",
-                        quantityAvailable=99999,  # will be capped at 500
+                        quantityAvailable=99999,
                         InventoryLocationArray=None,
                     ),
                 ]
@@ -207,8 +214,100 @@ async def test_inventory_cap_and_shape():
 
     assert by_part["PC61-NVY-M"].quantity_available == 350
     assert by_part["PC61-NVY-M"].warehouse_code == "Seattle"
-    assert by_part["PC61-NVY-L"].quantity_available == 500  # capped
+    # Cap removed — SanMar reports up to 3000 per warehouse × 8 warehouses.
+    assert by_part["PC61-NVY-L"].quantity_available == 99999
     assert by_part["PC61-NVY-L"].warehouse_code is None
+
+
+async def test_inventory_reads_nested_quantity_value():
+    """SanMar wraps inventory qty as <quantityAvailable><Quantity><value>N</value></Quantity></quantityAvailable>."""
+    svc = FakeService()
+    svc.responses[("getInventoryLevels", "K420")] = NS(
+        Inventory=NS(
+            productId="K420",
+            PartInventoryArray=NS(
+                PartInventory=[
+                    NS(
+                        partId="92032",
+                        quantityAvailable=NS(Quantity=NS(uom="EA", value="1045")),
+                        InventoryLocationArray=None,
+                    )
+                ]
+            ),
+        )
+    )
+    levels = await _client(svc).get_inventory(["K420"])
+    assert len(levels) == 1
+    assert levels[0].part_id == "92032"
+    assert levels[0].quantity_available == 1045
+
+
+async def test_inventory_aggregates_per_warehouse_and_picks_primary():
+    """Sum per-warehouse quantities; warehouse_code = highest-stock location."""
+    svc = FakeService()
+    svc.responses[("getInventoryLevels", "K420")] = NS(
+        Inventory=NS(
+            productId="K420",
+            PartInventoryArray=NS(
+                PartInventory=[
+                    NS(
+                        partId="92032",
+                        quantityAvailable=None,
+                        InventoryLocationArray=NS(
+                            InventoryLocation=[
+                                NS(
+                                    inventoryLocationId="1",
+                                    inventoryLocationName="Seattle",
+                                    inventoryLocationQuantity=NS(
+                                        Quantity=NS(value="200")
+                                    ),
+                                ),
+                                NS(
+                                    inventoryLocationId="3",
+                                    inventoryLocationName="Dallas",
+                                    inventoryLocationQuantity=NS(
+                                        Quantity=NS(value="500")
+                                    ),
+                                ),
+                                NS(
+                                    inventoryLocationId="4",
+                                    inventoryLocationName="Reno",
+                                    inventoryLocationQuantity=NS(
+                                        Quantity=NS(value="161")
+                                    ),
+                                ),
+                            ]
+                        ),
+                    )
+                ]
+            ),
+        )
+    )
+    levels = await _client(svc).get_inventory(["K420"])
+    assert len(levels) == 1
+    assert levels[0].quantity_available == 861  # 200 + 500 + 161
+    assert levels[0].warehouse_code == "Dallas"  # highest-stock
+
+
+async def test_inventory_prefers_top_level_when_locations_empty():
+    """If top-level qty is set and no per-location qty, use top-level."""
+    svc = FakeService()
+    svc.responses[("getInventoryLevels", "PC61")] = NS(
+        Inventory=NS(
+            productId="PC61",
+            PartInventoryArray=NS(
+                PartInventory=[
+                    NS(
+                        partId="PC61-M",
+                        quantityAvailable=NS(Quantity=NS(value="42")),
+                        InventoryLocationArray=None,
+                    )
+                ]
+            ),
+        )
+    )
+    levels = await _client(svc).get_inventory(["PC61"])
+    assert levels[0].quantity_available == 42
 
 
 # ---------------------------------------------------------------------------

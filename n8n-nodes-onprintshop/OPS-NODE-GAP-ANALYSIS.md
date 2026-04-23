@@ -48,17 +48,13 @@ The n8n node implements **~22 distinct operations** across 10 resources. The kno
 | 9 | **Set Master Option Tags** | `setMasterOptionTag` | input | Medium |
 | 10 | **Set Master option attributes** | `setMasterOptionAttributes` | input | Medium |
 | 11 | **Set Master option Attribute price** | `setMasterOptionAttributePrice` | input | Medium |
-| 12 | **Set Product** | `setProduct` | input | High |
-| 13 | **Set Product Price** | `setProductPrice` | input | High |
-| 14 | **Assign Options** | `setAssignOptions` | input | Medium |
-| 15 | **Set Product Size** | `setProductSize` | input | Medium |
-| 16 | **Set Product Pages** | `setProductPages` | input | Medium |
-| 17 | **Set Store Address** | `setStoreAddress` | input | Low |
-| 18 | **Set Department** | `setDepartment` | input | Medium |
-| 19 | **Set Store** | `setStore` | input | Low |
-| 20 | **Set Markup Master** | `setStoreMarkup` | input | Low |
-| 21 | **Set Product Category** | `setProductCategory` | input | Medium |
-| 22 | **Set FAQ Category** | `setFaqCategory` | input | Low |
+| 12 | **Assign Options** | `setAssignOptions` | input | Medium |
+| 13 | **Set Product Pages** | `setProductPages` | input | Medium |
+| 14 | **Set Store Address** | `setStoreAddress` | input | Low |
+| 15 | **Set Department** | `setDepartment` | input | Medium |
+| 16 | **Set Store** | `setStore` | input | Low |
+| 17 | **Set Markup Master** | `setStoreMarkup` | input | Low |
+| 18 | **Set FAQ Category** | `setFaqCategory` | input | Low |
 | 23 | **Set Quote** | `setQuote` | userid, quote_id, selectedShippingType, quote_title, input | High |
 | 24 | **Set Order - Staging** | `setOrder` | userid, order_id, selectedShippingType, order_title, input | Medium (staging) |
 | 25 | **Modify Order Product - Beta** | `modifyOrderProduct` | orderid, input | Medium (beta) |
@@ -70,6 +66,15 @@ The n8n node implements **~22 distinct operations** across 10 resources. The kno
 | 31 | **Update ziflow link images wise** | `setOrderProductImage` | order_product_id, update_ziflow_link_only, input | High -- Ziflow integration |
 | 32 | **Add proof version** | `setOrderProductImage` | order_product_id, update_ziflow_link_only, add_version_file_only, ask_for_approval, input | High -- Ziflow integration |
 | 33 | **Set Product Design** | `setProductDesign` | order_product_id, ziflow_link, ziflow_preflight_link | High -- Ziflow integration |
+
+### 1.3 Recently Implemented Mutations (Vidhi branch — 2026-04-23)
+
+| GraphQL Operation | Implemented In | Status |
+|---|---|---|
+| `setProduct` | `OnPrintShop.node.ts` | ✅ Implemented |
+| `setProductPrice` | `OnPrintShop.node.ts` | ✅ Implemented |
+| `setProductSize` | `OnPrintShop.node.ts` | ✅ Implemented — Task 2 |
+| `setProductCategory` | `OnPrintShop.node.ts` | ✅ Implemented — Task 3 |
 
 ---
 
@@ -228,7 +233,7 @@ These are documented in the knowledge pack but are currently blocked/failed at t
 5. **Get Quote / Get Quote Product** (`get_quote`, `quoteproduct`) -- quote workflow enabler
 6. **Set Order Product** (`setOrderProduct`) -- order product management
 7. **Set Batch** (`setBatch`) -- batch management write path
-8. **Set Product / Set Product Price** (`setProduct`, `setProductPrice`) -- product catalog management
+8. ~~**Set Product / Set Product Price** (`setProduct`, `setProductPrice`)~~ -- ✅ Implemented (2026-04-23)
 9. **Update Order Product Images / Set Product Design** (`setOrderProductImage`, `setProductDesign`) -- Ziflow integration
 10. **Add proof version / Update ziflow link** -- Ziflow proof management
 
@@ -236,7 +241,7 @@ These are documented in the knowledge pack but are currently blocked/failed at t
 11. Store Details, Department Details, Set Department
 12. Master Option Tag, Option Group, Option Formulas, Master Option Ranges
 13. Set Master Option Rules/Tags/Attributes/Attribute Price
-14. Assign Options, Set Product Size, Set Product Pages, Set Product Category
+14. Assign Options, ~~Set Product Size~~✅, Set Product Pages, ~~Set Product Category~~✅
 15. Set Quote, Modify Order Product
 
 ### P3 -- Low-Value / Staging
@@ -251,9 +256,9 @@ These are documented in the knowledge pack but are currently blocked/failed at t
 | Category | Knowledge Pack (Approved) | Node Implements | Coverage |
 |----------|--------------------------|-----------------|----------|
 | Queries | 30 | 16 | **53%** |
-| Mutations | 35 | 4* | **11%** |
-| **Total** | **65** | **20** | **31%** |
+| Mutations | 35 | 8* | **23%** |
+| **Total** | **65** | **24** | **37%** |
 
-*Mutations counted: updateOrderStatus (broken contract), updateProductStock (correct via product resource, broken via mutation resource), createShipment (unverified contract), setCustomer (via customer create/update -- different contract).
+*Mutations counted: updateOrderStatus (broken contract), updateProductStock (correct via product resource, broken via mutation resource), createShipment (unverified contract), setCustomer (via customer create/update -- different contract), setProduct ✅, setProductPrice ✅, setProductSize ✅, setProductCategory ✅.
 
 **Node-only operations not in knowledge pack:** Product Get Simple/Detailed split, Customer Get by email, legacy status operations -- these are UI conveniences that map to knowledge pack queries with different parameterization.

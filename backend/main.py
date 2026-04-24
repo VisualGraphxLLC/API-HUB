@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import Base, engine, get_db
+from database import Base, ENVIRONMENT, async_session, engine, get_db
 
 # Import all models so SQLAlchemy registers them before create_all
 import modules.suppliers.models  # noqa: F401
@@ -66,6 +66,12 @@ async def lifespan(app: FastAPI):
                 raise e
             print(f"Database not ready... retrying in 2s ({retries} retries left)")
             await asyncio.sleep(2)
+
+    if ENVIRONMENT == "development":
+        from modules.suppliers.demo_seed import ensure_vg_ops_supplier
+
+        async with async_session() as db:
+            await ensure_vg_ops_supplier(db)
     yield
     await engine.dispose()
 

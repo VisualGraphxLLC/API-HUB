@@ -26,12 +26,25 @@ from zeep.cache import SqliteCache
 from zeep.transports import Transport
 
 from .schemas import (
+    PSCategoryData,
     PSInventoryLevel,
     PSMediaItem,
     PSPricePoint,
     PSProductData,
     PSProductPart,
 )
+
+# SanMar ships a fixed category list in their Web Services Integration Guide
+# (sanmar/SanMar-Web-Services-Integration-Guide-24.3.pdf p25-33). Not a SOAP
+# endpoint — just the strings their `getProductInfoByCategory` accepts.
+SANMAR_CATEGORIES = [
+    "Accessories", "Activewear", "Aprons", "Bags", "Caps",
+    "Drinkware", "Eyewear", "Golf Shirts", "Headwear", "Infant & Toddler",
+    "Juniors & Young Men", "Ladies", "Outerwear", "Pants & Shorts",
+    "Performance", "Polos/Knits", "Safety", "Sweatshirts/Fleece",
+    "T-Shirts", "Tall", "Towels & Blankets", "Woven Shirts", "Workwear",
+    "Youth", "Shoes", "Scrubs", "Sports Shirts",
+]
 
 log = logging.getLogger(__name__)
 
@@ -301,6 +314,72 @@ class PromoStandardsClient:
             size_name=size_name,
             description=_text(_attr(item, "description")),
         )
+
+    # -- Categories (SanMar extension; not in PS spec) ---------------------
+
+    async def get_categories(self) -> list[PSCategoryData]:
+        """Return the supplier's browseable category list.
+
+        SanMar: returns the fixed list from SANMAR_CATEGORIES (no SOAP call —
+        their Integration Guide publishes it as a static list). Other suppliers
+        raise NotImplementedError unless they override.
+        """
+        return [PSCategoryData(name=c) for c in SANMAR_CATEGORIES]
+
+    async def get_products_by_category(
+        self,
+        category_name: str,
+        limit: int = 50,
+        ws_version: str = "2.0.0",
+        localization_country: str = "us",
+        localization_language: str = "en",
+    ) -> list[PSProductData]:
+        """Call SanMar's getProductInfoByCategory, return first ``limit`` products.
+
+        Note: getProductInfoByCategory is a SanMar extension to the PS ProductData
+        service WSDL. Non-SanMar PS suppliers will fail at the zeep call level —
+        catch at caller if other suppliers are ever routed through this.
+        """
+        return await asyncio.to_thread(
+            self._sync_get_products_by_category,
+            category_name,
+            limit,
+            ws_version,
+            localization_country,
+            localization_language,
+        )
+
+    def _sync_get_products_by_category(
+        self,
+        category_name: str,
+        limit: int,
+        ws_version: str,
+        localization_country: str,
+        localization_language: str,
+    ) -> list[PSProductData]:
+        svc = self._get_service()
+        try:
+            response = svc.getProductInfoByCategory(
+                category=category_name,
+                **self._auth(ws_version, localization_country, localization_language),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning("getProductInfoByCategory(%s) failed: %s", category_name, exc)
+            return []
+
+        products_container = _attr(
+            response, "ProductArray", "productArray", "Products", "products"
+        )
+        product_items = _as_list(_attr(products_container, "Product", "product"))
+
+        out: list[PSProductData] = []
+        for item in product_items:
+            if limit and len(out) >= limit:
+                break
+            parsed = self._parse_product(item)
+            if parsed is not None:
+                out.append(parsed)
+        return out
 
     # -- Inventory ---------------------------------------------------------
 

@@ -1,6 +1,8 @@
+import os
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+import httpx
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,7 +10,7 @@ from database import get_db
 from modules.customers.models import Customer
 
 from .models import ProductPushLog
-from .schemas import ProductPushStatus, PushLogCreate, PushLogRead
+from .schemas import ProductPushStatus, PushLogCreate, PushLogRead, PushTriggerRequest, PushTriggerResponse
 
 router = APIRouter(tags=["push_log"])
 
@@ -51,6 +53,52 @@ async def create_push_log(body: PushLogCreate, db: AsyncSession = Depends(get_db
     await db.commit()
     await db.refresh(log)
     return log
+
+
+@router.post("/api/push-trigger", response_model=PushTriggerResponse, status_code=202)
+async def trigger_push(body: PushTriggerRequest):
+    """Trigger the n8n ops-push workflow for a single product + customer.
+
+    Calls GET /webhook/ops-push?customer_id=X&product_id=Y on the configured
+    n8n instance.  Returns 202 Accepted when n8n acknowledges the trigger.
+    Returns 503 if n8n is not reachable (e.g. Docker not running).
+    """
+    webhook_base = os.getenv("N8N_WEBHOOK_BASE", "http://localhost:5678").rstrip("/")
+    url = f"{webhook_base}/webhook/ops-push"
+    params = {
+        "customer_id": str(body.customer_id),
+        "product_id": str(body.product_id),
+        "limit": "1",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.get(url, params=params)
+            r.raise_for_status()
+            return PushTriggerResponse(
+                triggered=True,
+                message="Push triggered — n8n workflow started.",
+            )
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail="n8n is not reachable. Make sure Docker is running and n8n is up (port 5678).",
+        )
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="n8n did not respond in time. The workflow may still be running.",
+        )
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"n8n returned an error: HTTP {exc.response.status_code}",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error triggering push: {exc}",
+        )
 
 
 @router.get("/api/products/{product_id}/push-status", response_model=list[ProductPushStatus])

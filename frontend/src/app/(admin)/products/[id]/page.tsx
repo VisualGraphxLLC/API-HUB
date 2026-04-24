@@ -37,6 +37,7 @@ export default function ProductDetailPage() {
   const [pushStatuses, setPushStatuses] = useState<ProductPushStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [pushing, setPushing] = useState<string | null>(null);
+  const [pushRefresh, setPushRefresh] = useState(0);
   const [activeImageTab, setActiveImageTab] = useState<string>("front");
 
   const fetchData = async () => {
@@ -98,20 +99,21 @@ export default function ProductDetailPage() {
     }
     setPushing(targetId);
     try {
-      await api("/api/push-log", {
+      await api("/api/push-trigger", {
         method: "POST",
         body: JSON.stringify({
           product_id: product.id,
           customer_id: targetId,
-          status: "pushed",
-          ops_product_id: `ops-prod-${Math.floor(Math.random() * 9000) + 1000}`,
         }),
       });
-      const newStatuses = await api<ProductPushStatus[]>(`/api/products/${id}/push-status`);
-      setPushStatuses(newStatuses);
+      // n8n runs the workflow and writes the push log itself.
+      // Increment refreshTrigger so PushHistory re-fetches the updated log.
+      setPushRefresh((n) => n + 1);
     } catch (e) {
       console.error(e);
-      alert("Push failed. Check connection.");
+      alert(
+        "Push failed. Make sure Docker is running and n8n is up on port 5678."
+      );
     } finally {
       setPushing(null);
     }
@@ -373,6 +375,7 @@ export default function ProductDetailPage() {
         customers={customers}
         pushing={pushing}
         onPush={handlePush}
+        refreshTrigger={pushRefresh}
       />
 
     </div>

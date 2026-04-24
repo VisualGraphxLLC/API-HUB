@@ -39,6 +39,8 @@ interface Props {
   customers: Customer[];
   pushing: string | null;
   onPush: (customerId: string) => void;
+  /** Increment this number from the parent to force a log refresh after a push */
+  refreshTrigger?: number;
 }
 
 /* ── Status badge ───────────────────────────────────────────────────────── */
@@ -70,7 +72,7 @@ function StatusBadge({ status }: { status: string }) {
 
 /* ── Main component ─────────────────────────────────────────────────────── */
 
-export function PushHistory({ productId, customers, pushing, onPush }: Props) {
+export function PushHistory({ productId, customers, pushing, onPush, refreshTrigger }: Props) {
   const [logs, setLogs] = useState<PushLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +100,8 @@ export function PushHistory({ productId, customers, pushing, onPush }: Props) {
 
   useEffect(() => {
     fetchLogs();
-  }, [productId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId, refreshTrigger]);
 
   // Latest status per customer (for the "current status" summary row)
   const latestPerCustomer = customers.map((customer) => {

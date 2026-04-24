@@ -34,3 +34,13 @@ class ProductPushStatus(BaseModel):
     ops_product_id: Optional[str]
     status: str
     pushed_at: Optional[datetime]
+
+
+class PushTriggerRequest(BaseModel):
+    product_id: UUID
+    customer_id: UUID
+
+
+class PushTriggerResponse(BaseModel):
+    triggered: bool
+    message: str

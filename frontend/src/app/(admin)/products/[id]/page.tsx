@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { PushHistory } from "@/components/products/push-history";
 import type {
   Customer,
   Product,
@@ -366,78 +367,14 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* ── Storefront Publish Status ────────────────────────────── */}
-      <div className="bg-white border border-[#cfccc8] rounded-lg shadow-[4px_6px_0_rgba(30,77,146,0.08)] overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 bg-[#ebe8e3] border-b border-[#cfccc8]">
-          <div className="text-[14px] font-bold uppercase tracking-[0.05em] text-[#1e1e24]">
-            Storefront Publish Status
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-        <table className="w-full border-collapse min-w-[640px]">
-          <thead>
-            <tr>
-              {["Storefront", "Status", "Pushed", "Store Product ID", "Action"].map((h) => (
-                <th
-                  key={h}
-                  className="text-left px-6 py-3 text-[10px] font-bold uppercase tracking-[0.1em] text-[#888894] border-b border-[#cfccc8]"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {pushStatuses.map((s) => (
-              <tr key={s.customer_id} className="hover:bg-[rgba(30,77,146,0.05)] transition-colors">
-                <td className="px-6 py-[14px] text-[14px] text-[#1e1e24] font-semibold border-b border-[#f9f7f4]">
-                  {s.customer_name}
-                </td>
-                <td className="px-6 py-[14px] border-b border-[#f9f7f4]">
-                  {s.status === "pushed" ? (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1 rounded-full bg-[#f0f9f4] text-[#247a52]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#247a52]" />
-                      Published
-                    </span>
-                  ) : s.status === "failed" ? (
-                    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1 rounded-full bg-[#fdf2f2] text-[#b93232]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#b93232]" />
-                      Connection Failed
-                    </span>
-                  ) : (
-                    <span className="text-[12px] text-[#b4b4bc]">Not pushed</span>
-                  )}
-                </td>
-                <td className="px-6 py-[14px] font-mono text-[12px] text-[#484852] border-b border-[#f9f7f4]">
-                  {s.pushed_at ? new Date(s.pushed_at).toLocaleString() : "—"}
-                </td>
-                <td className="px-6 py-[14px] font-mono text-[12px] text-[#484852] border-b border-[#f9f7f4]">
-                  {s.ops_product_id || "—"}
-                </td>
-                <td className="px-6 py-[14px] border-b border-[#f9f7f4]">
-                  <button
-                    onClick={() => handlePush(s.customer_id)}
-                    disabled={pushing === s.customer_id}
-                    className="px-3 py-1 text-[11px] font-semibold bg-white border border-[#cfccc8] rounded
-                               shadow-[0_2px_0_rgba(30,77,146,0.08)] hover:border-[#1e4d92] transition-all
-                               disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {pushing === s.customer_id ? "..." : "Push Now"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {pushStatuses.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-6 py-5 text-center text-[#888894] text-[13px]">
-                  No customers configured. Add one in the Customers page to enable pushing.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        </div>
-      </div>
+      {/* ── Push History (current status + full log) ────────────── */}
+      <PushHistory
+        productId={id}
+        customers={customers}
+        pushing={pushing}
+        onPush={handlePush}
+      />
+
     </div>
   );
 }

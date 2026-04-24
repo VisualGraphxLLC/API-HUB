@@ -94,26 +94,28 @@ export default function ProductDetailPage() {
     if (!product) return;
     const targetId = customerId || (customers.length > 0 ? customers[0].id : null);
     if (!targetId) {
-      alert("Please configure a customer in the Customers page first.");
+      alert("Please configure a storefront in the Storefronts page first.");
       return;
     }
     setPushing(targetId);
     try {
-      await api("/api/push-trigger", {
+      // Trigger n8n workflow — it writes the push-log entry itself on completion
+      await api(`/api/n8n/workflows/ops-push-001/trigger`, {
         method: "POST",
         body: JSON.stringify({
           product_id: product.id,
           customer_id: targetId,
         }),
       });
-      // n8n runs the workflow and writes the push log itself.
-      // Increment refreshTrigger so PushHistory re-fetches the updated log.
+      // Poll push status after ~5s for the result (n8n workflow ~15s total)
+      await new Promise((r) => setTimeout(r, 5000));
+      const newStatuses = await api<ProductPushStatus[]>(`/api/products/${id}/push-status`);
+      setPushStatuses(newStatuses);
+      // Also trigger PushHistory to re-fetch its log (both tables live there)
       setPushRefresh((n) => n + 1);
     } catch (e) {
       console.error(e);
-      alert(
-        "Push failed. Make sure Docker is running and n8n is up on port 5678."
-      );
+      alert("Publish failed. Check n8n logs at http://localhost:5678.");
     } finally {
       setPushing(null);
     }

@@ -103,11 +103,17 @@ async def list_executions(workflow_id: Optional[str] = None, limit: int = 20):
 
 
 @router.post("/workflows/{workflow_id}/trigger")
-async def trigger_workflow(workflow_id: str):
+async def trigger_workflow(workflow_id: str, body: Optional[dict] = None):
     """Trigger workflow via its first webhook path.
 
     n8n public API has no sync "run"; workflow must have an active webhook
     trigger. We look it up and GET it.
+
+    Optional JSON body is forwarded as webhook query params. Example:
+        POST /api/n8n/workflows/ops-push-001/trigger
+        { "product_id": "abc", "customer_id": "xyz" }
+    becomes:
+        GET /webhook/ops-push?product_id=abc&customer_id=xyz
     """
     async with await _client() as c:
         r = await c.get(f"/api/v1/workflows/{workflow_id}")
@@ -130,8 +136,29 @@ async def trigger_workflow(workflow_id: str):
             409, f"Workflow '{w.get('name')}' has no webhook trigger"
         )
 
-    trigger_url = f"{_base()}/webhook/{webhook_path}"
-    async with httpx.AsyncClient(timeout=10.0) as c:
-        r = await c.get(trigger_url)
-        r.raise_for_status()
-        return {"triggered": True, "url": trigger_url, "response": r.json()}
+    trigger_url = f"{_webhook_base()}/webhook/{webhook_path}"
+    # Forward body fields as query params so the webhook's Parse Params node can read them
+    params = {k: str(v) for k, v in (body or {}).items() if v is not None}
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as c:
+            r = await c.get(trigger_url, params=params)
+            r.raise_for_status()
+            try:
+                response_data = r.json()
+            except ValueError:
+                response_data = r.text
+            return {"triggered": True, "url": trigger_url, "response": response_data}
+    except httpx.ConnectError:
+        raise HTTPException(
+            503,
+            "n8n webhook is not reachable. Make sure Docker is running and n8n is up on port 5678.",
+        )
+    except httpx.TimeoutException:
+        raise HTTPException(
+            504, "n8n webhook timed out. The workflow may still be running."
+        )
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            502, f"n8n returned an error: HTTP {exc.response.status_code}"
+        )

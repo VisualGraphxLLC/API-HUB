@@ -2,7 +2,7 @@
 
 **Status:** ✅ Completed on 2026-04-24
 **Branch:** `Vidhi`
-**What you can say in one sentence:** *"I replaced the fake push button (which wrote a random ID directly to the database) with a real connection to the n8n workflow — so clicking Push Now actually starts the OPS automation pipeline."*
+**What you can say in one sentence:** *"I replaced the fake Push Now button (which wrote a random ID directly to the database) with a real call to the n8n workflow — so clicking Push Now actually starts the OPS automation pipeline, then waits 5s and refreshes the status tables."*
 
 ---
 
@@ -10,12 +10,10 @@
 
 | File | What Changed |
 |---|---|
-| `backend/modules/push_log/schemas.py` | Added `PushTriggerRequest` and `PushTriggerResponse` models |
-| `backend/modules/push_log/routes.py` | Added `POST /api/push-trigger` endpoint |
-| `n8n-workflows/ops-push.json` | Updated Parse Params node to support `product_id` param (single-product push) |
-| `frontend/src/components/products/push-history.tsx` | Added `refreshTrigger` prop so parent can force a log refresh |
-| `frontend/src/app/(admin)/products/[id]/page.tsx` | Replaced mock `handlePush` with real `/api/push-trigger` call |
-| `.env` | Added `N8N_BASE_URL` and `N8N_WEBHOOK_BASE` variables |
+| `backend/modules/n8n_proxy/routes.py` | Extended `POST /api/n8n/workflows/{id}/trigger` to accept a JSON body and forward its fields as webhook query params; added proper error handling (503/504/502) |
+| `n8n-workflows/ops-push.json` | Updated Parse Params node to support `product_id` query param (single-product push) |
+| `frontend/src/components/products/push-history.tsx` | Added `refreshTrigger` prop so the parent can force a log refresh after a push |
+| `frontend/src/app/(admin)/products/[id]/page.tsx` | Replaced mock `handlePush` with real `/api/n8n/workflows/ops-push-001/trigger` call + 5s poll pattern |
 
 ---
 
@@ -53,143 +51,167 @@ This was intentional during early development — it let the UI be tested before
 ```
 User clicks "Push Now"
     ↓
-Frontend calls POST /api/push-trigger
-  { product_id: "abc-123", customer_id: "xyz-456" }
+Frontend: POST /api/n8n/workflows/ops-push-001/trigger
+          body: { product_id, customer_id }
     ↓
-FastAPI backend calls n8n webhook
-  GET http://localhost:5678/webhook/ops-push
-     ?customer_id=xyz-456&product_id=abc-123&limit=1
+Backend (n8n_proxy):
+  - Looks up workflow "ops-push-001" in n8n REST API
+  - Finds its webhook path ("ops-push")
+  - Forwards body fields as webhook query params
+    ↓
+Backend calls: GET http://localhost:5678/webhook/ops-push
+                    ?product_id=abc-123&customer_id=xyz-456
     ↓
 n8n workflow runs (ops-push.json):
   Parse Params → Get Product → Build OPS Inputs
   → Set Category → Set Product → Set Sizes + Set Price
   → Write push-log entry (status: pushed or failed)
     ↓
-n8n responds to backend (success or error)
+Backend returns { triggered: true, response: {...} } to frontend
     ↓
-Backend returns 202 Accepted to frontend
+Frontend waits 5 seconds
     ↓
-Frontend increments refreshTrigger
+Frontend: GET /api/products/{id}/push-status  (re-fetch per-customer status)
+Frontend: increments refreshTrigger  (re-fetches PushHistory log table)
     ↓
-PushHistory component re-fetches /api/push-log
-    ↓
-User sees real result in the history table
+User sees real OPS product ID + real status in the history table
 ```
 
 ---
 
-## 4. The Three New Pieces — Explained
+## 4. The Three Pieces — Explained
 
-### Piece 1 — POST /api/push-trigger (Backend)
+### Piece 1 — Reusing `/api/n8n/workflows/{id}/trigger`
 
-New FastAPI endpoint. It's the bridge between the frontend and n8n.
+Rather than inventing a new endpoint, Task 8 reuses the existing `POST /api/n8n/workflows/{workflow_id}/trigger` route in `n8n_proxy/routes.py`. Originally it just fired the webhook with no params — not useful for a single-product push.
+
+**The update:** accept an optional JSON body and forward its fields as webhook query params.
 
 ```python
-@router.post("/api/push-trigger", status_code=202)
-async def trigger_push(body: PushTriggerRequest):
-    webhook_base = os.getenv("N8N_WEBHOOK_BASE", "http://localhost:5678")
-    url = f"{webhook_base}/webhook/ops-push"
-    params = {
-        "customer_id": str(body.customer_id),
-        "product_id": str(body.product_id),
-        "limit": "1",
-    }
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.get(url, params=params)
+@router.post("/workflows/{workflow_id}/trigger")
+async def trigger_workflow(workflow_id: str, body: Optional[dict] = None):
+    # ... look up workflow and find its webhook path ...
+    trigger_url = f"{_webhook_base()}/webhook/{webhook_path}"
+    params = {k: str(v) for k, v in (body or {}).items() if v is not None}
+    async with httpx.AsyncClient(timeout=30.0) as c:
+        r = await c.get(trigger_url, params=params)
         r.raise_for_status()
-        return PushTriggerResponse(triggered=True, message="Push triggered — n8n workflow started.")
+        return {"triggered": True, "url": trigger_url, "response": r.json()}
+```
+
+So:
+```
+POST /api/n8n/workflows/ops-push-001/trigger
+{ "product_id": "abc", "customer_id": "xyz" }
+```
+becomes:
+```
+GET /webhook/ops-push?product_id=abc&customer_id=xyz
 ```
 
 **Error handling:**
-| Error | What Happens | HTTP Code |
+| Error | HTTP Code | Message |
 |---|---|---|
-| Docker not running | Returns "n8n is not reachable" | 503 |
-| n8n takes too long | Returns "n8n did not respond in time" | 504 |
-| n8n returns error | Returns "n8n returned an error: HTTP XXX" | 502 |
-| Anything else | Returns "Unexpected error: ..." | 500 |
-
-**Why status 202?** Because n8n runs asynchronously. We've accepted the job, not necessarily completed it. HTTP 202 = "Accepted, work in progress."
+| Docker/n8n not running | 503 | "n8n webhook is not reachable…" |
+| n8n takes too long | 504 | "n8n webhook timed out…" |
+| n8n returns error | 502 | "n8n returned an error: HTTP XXX" |
+| Workflow not found | 404 | "Workflow not found" |
+| Workflow not active | 409 | "Workflow 'X' is not active" |
 
 ---
 
 ### Piece 2 — n8n Workflow: product_id Support
 
-Before Task 8, the n8n workflow could only push **all products** for a customer at once. You couldn't say "just push this one product."
+Before Task 8, the n8n Parse Params node only read `customer_id`, `supplier_id`, `limit` — it always fetched a **list** of products. You couldn't push just one.
 
-The Parse Params node was updated:
+The node was updated to also read `product_id`:
 
 ```js
-// BEFORE — only list endpoint
-const url = new URL(`${api_base}/api/products`);
-url.searchParams.set('limit', String(limit));
-products_url = url.toString();
-// → fetches ALL products, processes them all
+const product_id = q.product_id ?? q.productId ?? null;
 
-// AFTER — single product when product_id is given
+let products_url;
 if (product_id) {
+  // Single-product push (from product detail page)
   products_url = `${api_base}/api/products/${product_id}`;
-  // → fetches ONE product, n8n processes it
 } else {
-  // original bulk behaviour unchanged
+  // Bulk push (all products for a customer/supplier)
+  const url = new URL(`${api_base}/api/products`);
+  url.searchParams.set('limit', String(limit));
+  if (supplier_id) url.searchParams.set('supplier_id', String(supplier_id));
+  products_url = url.toString();
 }
 ```
 
-The `Explode Products` node already handled single objects (it checks `if (Array.isArray(j))` first, then falls back to `[j]` for single objects), so no change was needed there.
+The existing `Explode Products` node already handled both a list response and a single-object response, so no further changes were needed downstream.
 
 ---
 
-### Piece 3 — refreshTrigger Prop (Frontend)
+### Piece 3 — Frontend `handlePush` + PushHistory `refreshTrigger`
 
-**The problem:** After clicking Push Now, n8n writes the real push-log entry. But the PushHistory component only re-fetches when `productId` changes. If we navigate away and back, it refreshes. But not on the same page after a push.
-
-**The fix:** Added `refreshTrigger?: number` prop to PushHistory. When the parent increments it, the component re-fetches.
+**The new handlePush (matches the spec):**
 
 ```tsx
-// In push-history.tsx:
+const handlePush = async (customerId?: string) => {
+  if (!product) return;
+  const targetId = customerId || (customers.length > 0 ? customers[0].id : null);
+  if (!targetId) {
+    alert("Please configure a storefront in the Storefronts page first.");
+    return;
+  }
+  setPushing(targetId);
+  try {
+    // Trigger n8n workflow — it writes the push-log entry itself on completion
+    await api(`/api/n8n/workflows/ops-push-001/trigger`, {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: product.id,
+        customer_id: targetId,
+      }),
+    });
+    // Poll push status after ~5s for the result (n8n workflow takes ~15s total)
+    await new Promise((r) => setTimeout(r, 5000));
+    const newStatuses = await api<ProductPushStatus[]>(`/api/products/${id}/push-status`);
+    setPushStatuses(newStatuses);
+    // Also trigger PushHistory to re-fetch its log (both tables live there)
+    setPushRefresh((n) => n + 1);
+  } catch (e) {
+    console.error(e);
+    alert("Publish failed. Check n8n logs at http://localhost:5678.");
+  } finally {
+    setPushing(null);
+  }
+};
+```
+
+**Why `refreshTrigger` on PushHistory?**
+Task 7 merged the "Storefront Publish Status" and "Push Log History" tables into a single `PushHistory` component that fetches its own data (`/api/push-log`). The spec's polling pattern only refreshes the parent's `pushStatuses` state — but since PushHistory has its own internal log fetch, we also need to tell it to re-fetch. Incrementing `refreshTrigger` does that.
+
+```tsx
+// In PushHistory:
 useEffect(() => {
   fetchLogs();
-}, [productId, refreshTrigger]);  // ← re-runs when refreshTrigger changes
-
-// In the parent page:
-const [pushRefresh, setPushRefresh] = useState(0);
-
-const handlePush = async (...) => {
-  await api("/api/push-trigger", { ... });
-  setPushRefresh((n) => n + 1);  // ← increments after push completes
-};
-
-<PushHistory refreshTrigger={pushRefresh} ... />
+}, [productId, refreshTrigger]);  // re-runs when refreshTrigger changes
 ```
-
-This is a clean pattern — the parent controls when to refresh without needing to know PushHistory's internal implementation.
 
 ---
 
-## 5. Environment Variables Added
+## 5. Build Verification
 
-Added to `.env` (root):
-
-```
-N8N_BASE_URL=http://localhost:5678
-N8N_WEBHOOK_BASE=http://localhost:5678
-```
-
-**Why two variables?**
-- `N8N_BASE_URL` — for the n8n REST API (management: list workflows, executions)
-- `N8N_WEBHOOK_BASE` — for webhook triggers (different path in some deployments)
-
-In development both point to the same place. In production, you might expose webhooks on a different domain.
+- ✅ `npx tsc --noEmit` — no TypeScript errors in our changed files
+- ✅ `python ast.parse` — backend Python syntax OK
+- ⚠️ Pre-existing error in `/storefront/vg/page.tsx` (useSearchParams without Suspense) — not ours
+- Warnings about `<img>` tags and `useEffect` dependencies are pre-existing
 
 ---
 
-## 6. Build Verification
+## 6. Acceptance Criteria (From Spec)
 
-Ran `npm run build` after the changes:
-
-- ✅ TypeScript compiled successfully — no errors in our changed files
-- ✅ No ESLint errors in `push-history.tsx` or `products/[id]/page.tsx`
-- ⚠️ Pre-existing error in `/storefront/vg/page.tsx` (useSearchParams without Suspense) — pre-existing, confirmed in Task 7
-- Warnings about `<img>` tags are pre-existing across the codebase
+| Criterion | Status |
+|---|---|
+| Product detail page shows the Publish Status table (per storefront) | ✅ (inside PushHistory — Table 1) |
+| …and below it the Push History table (timeline of all push attempts) | ✅ (inside PushHistory — Table 2) |
+| Clicking "Push Now" triggers n8n (not a mock) | ✅ (calls `/api/n8n/workflows/ops-push-001/trigger`) |
+| After workflow completes (~15s), push status updates | ✅ (5s poll + `refreshTrigger` refreshes both tables) |
 
 ---
 

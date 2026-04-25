@@ -10,12 +10,6 @@ interface Props {
   onCancel: () => void;
 }
 
-const POPULAR_SUPPLIERS = [
-  { name: "SanMar", code: "SANMAR", type: "ps" },
-  { name: "S&S Activewear", code: "SSACT", type: "ps" },
-  { name: "alphabroder", code: "ALPHA", type: "ps" },
-  { name: "4Over", code: "4OVER", type: "custom" },
-];
 
 const SCHEDULE_MAP: Record<string, any> = {
   "Recommended (automatic)": { inv: "30min", price: "daily", prod: "daily", img: "weekly" },
@@ -50,11 +44,28 @@ export default function RevealForm({ psCompanies, onSaved, onCancel }: Props) {
 
   const handleTestConnection = async () => {
     setTestStatus("testing");
-    await new Promise((r) => setTimeout(r, 1500));
-    // Demo logic: succeed if both fields have content
-    if (creds.id && creds.password) {
-      setTestStatus("ok");
-    } else {
+    try {
+      const isPS = !isCustom;
+      const protocol = isPS 
+        ? "promostandards"
+        : (customType === "Secure API (signed requests)" ? "hmac" : "rest");
+      
+      const res = await api<any>("/api/suppliers/test", {
+        method: "POST",
+        body: JSON.stringify({
+          protocol,
+          promostandards_code: isPS ? selectedPS?.Code : null,
+          auth_config: { id: creds.id, password: creds.password }
+        })
+      });
+
+      if (res.ok) {
+        setTestStatus("ok");
+      } else {
+        setTestStatus("fail");
+      }
+    } catch (err) {
+      console.error("Test connection failed:", err);
       setTestStatus("fail");
     }
   };
@@ -64,13 +75,11 @@ export default function RevealForm({ psCompanies, onSaved, onCancel }: Props) {
     try {
       const isPS = !isCustom;
       
-      // Fallback for demo if selectedPS is somehow null but we think it's a PS integration
-      // (This can happen if the POPULAR_SUPPLIERS code isn't perfectly matched in psCompanies)
-      const name = isPS ? (selectedPS?.Name || "Mock Supplier") : customName;
+      const name = isPS ? selectedPS!.Name : customName;
       const protocol = isPS 
         ? "promostandards"
         : (customType === "Secure API (signed requests)" ? "hmac" : "rest");
-      const code = isPS ? (selectedPS?.Code || "MOCK") : customName.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+      const code = isPS ? selectedPS!.Code : customName.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
       
       const supplier = await api<Supplier>("/api/suppliers", {
         method: "POST",
@@ -151,32 +160,19 @@ export default function RevealForm({ psCompanies, onSaved, onCancel }: Props) {
                   <div className="mb-6">
                     <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Popular Suppliers</div>
                     <div className="grid grid-cols-2 gap-3">
-                      {POPULAR_SUPPLIERS.map((s) => (
+                      {psCompanies.slice(0, 4).map((s) => (
                         <button
-                          key={s.code}
+                          key={s.Code}
                           onClick={() => {
-                            if (s.type === "ps") {
-                              const company = psCompanies.find(c => c.Code === s.code);
-                              if (company) {
-                                setSelectedPS(company);
-                              } else {
-                                // Fallback mock object if API doesn't return exactly this code
-                                setSelectedPS({ Code: s.code, Name: s.name } as PSCompany);
-                              }
-                              setIsCustom(false);
-                            } else {
-                              setIsCustom(true);
-                              setCustomName(s.name);
-                              setCustomUrl("https://api.4over.com");
-                              setCustomType("Secure API (signed requests)");
-                            }
+                            setSelectedPS(s);
+                            setIsCustom(false);
                             setStep(2);
                           }}
                           className="flex items-center justify-between p-4 border rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group"
                         >
                           <div className="text-left">
-                            <div className="font-bold text-sm text-gray-800">{s.name}</div>
-                            <div className="text-[10px] text-gray-500 font-mono">{s.code}</div>
+                            <div className="font-bold text-sm text-gray-800">{s.Name}</div>
+                            <div className="text-[10px] text-gray-500 font-mono">{s.Code}</div>
                           </div>
                           <div className="text-blue-400 group-hover:text-blue-600 transition-colors">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>

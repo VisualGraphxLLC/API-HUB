@@ -112,8 +112,10 @@ class PromoStandardsClient:
     def _get_service(self) -> Any:
         if self._service is not None:
             return self._service
+        from zeep.settings import Settings
+        settings = Settings(strict=False, xml_huge_tree=True)
         transport = Transport(cache=SqliteCache())
-        self._service = ZeepClient(self.wsdl_url, transport=transport).service
+        self._service = ZeepClient(self.wsdl_url, transport=transport, settings=settings).service
         return self._service
 
     def _auth(

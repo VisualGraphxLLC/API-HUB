@@ -40,7 +40,8 @@ export default function MasterOptionsCatalogPage() {
       await load();
     } catch (e) {
       console.error(e);
-      alert("Sync failed. Check n8n at http://localhost:5678.");
+      const n8nUrl = process.env.NEXT_PUBLIC_N8N_URL || "http://localhost:5678";
+      alert(`Sync failed. Check n8n at ${n8nUrl}.`);
     } finally {
       setSyncing(false);
     }

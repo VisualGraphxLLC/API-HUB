@@ -1,8 +1,9 @@
 import httpx
+import os
 
-PS_DIRECTORY_URL = (
-    "https://services.promostandards.org"
-    "/WebServiceRepository/WebServiceRepository.svc/json"
+PS_DIRECTORY_URL = os.getenv(
+    "PS_DIRECTORY_URL",
+    "https://services.promostandards.org/WebServiceRepository/WebServiceRepository.svc/json"
 )
 
 

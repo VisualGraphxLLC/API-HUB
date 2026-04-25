@@ -7,13 +7,7 @@ import { api } from "@/lib/api";
 import type { PSCompany, Supplier } from "@/lib/types";
 import RevealForm from "@/components/suppliers/reveal-form";
 
-/* ── Demo product baselines per supplier slug ── */
-const PROD_BASELINE: Record<string, number> = {
-  sanmar: 12450,
-  "ss-activewear": 8201,
-  alphabroder: 11800,
-  "4over": 1240,
-};
+
 
 /* ── Relative time helper ── */
 function timeAgo(dateStr: string): string {
@@ -26,40 +20,6 @@ function timeAgo(dateStr: string): string {
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
 }
-
-/* ── PS Directory static list ── */
-const COS: PSCompany[] = [
-  { Code: "SANMAR", Name: "SanMar Corporation", Type: "Supplier" },
-  { Code: "SS", Name: "S&S Activewear", Type: "Supplier" },
-  { Code: "ALPHA", Name: "alphabroder", Type: "Supplier" },
-  { Code: "HIT", Name: "Hit Promotional Products", Type: "Supplier" },
-  { Code: "PCNA", Name: "Polyconcept North America", Type: "Supplier" },
-  { Code: "GEMLINE", Name: "Gemline", Type: "Supplier" },
-  { Code: "EVANS", Name: "Evans Manufacturing", Type: "Supplier" },
-  { Code: "STORMCREEK", Name: "Storm Creek", Type: "Supplier" },
-  { Code: "SNUGZ", Name: "Snugz USA", Type: "Supplier" },
-  { Code: "LOGOMARK", Name: "Logomark", Type: "Supplier" },
-  { Code: "CHARLES", Name: "Charles River Apparel", Type: "Supplier" },
-  { Code: "AUGUSTA", Name: "Augusta Sportswear", Type: "Supplier" },
-  { Code: "TRIMARK", Name: "Trimark Sportswear", Type: "Supplier" },
-  { Code: "LEED", Name: "Leeds / PCNA", Type: "Supplier" },
-  { Code: "BUDGETCAP", Name: "Budget Cap Inc", Type: "Supplier" },
-  { Code: "CAPAMER", Name: "Cap America", Type: "Supplier" },
-  { Code: "CUTTER", Name: "Cutter & Buck", Type: "Supplier" },
-  { Code: "FLEXFIT", Name: "Flexfit / Yupoong", Type: "Supplier" },
-  { Code: "GILDANUSA", Name: "Gildan USA", Type: "Supplier" },
-  { Code: "HANES", Name: "Hanesbrands", Type: "Supplier" },
-  { Code: "NEXTLEVEL", Name: "Next Level Apparel", Type: "Supplier" },
-  { Code: "OGIO", Name: "OGIO International", Type: "Supplier" },
-  { Code: "PORTAUTH", Name: "Port Authority", Type: "Supplier" },
-  { Code: "SPORTTEK", Name: "Sport-Tek", Type: "Supplier" },
-  { Code: "UNDERARMOUR", Name: "Under Armour Corporate", Type: "Supplier" },
-  { Code: "VANTAGE", Name: "Vantage Apparel", Type: "Supplier" },
-  { Code: "NORTH_END", Name: "North End / Ash City", Type: "Supplier" },
-  { Code: "DEVON_JONES", Name: "Devon & Jones", Type: "Supplier" },
-  { Code: "HARRITON", Name: "Harriton", Type: "Supplier" },
-  { Code: "WEATHERPROOF", Name: "Weatherproof Garment", Type: "Supplier" },
-];
 
 interface PushLogEntry {
   supplier_name: string | null;
@@ -80,9 +40,11 @@ function SuppliersContent() {
     Promise.all([
       api<Supplier[]>("/api/suppliers"),
       api<PushLogEntry[]>("/api/push-log?limit=100"),
+      api<PSCompany[]>("/api/ps-directory/companies"),
     ])
-      .then(([sups, logs]) => {
+      .then(([sups, logs, companies]) => {
         setSuppliers(sups);
+        setPsCompanies(companies);
         // Build map: supplier_name (lowercase) → most recent pushed_at
         const map: Record<string, string> = {};
         for (const log of logs) {
@@ -104,7 +66,6 @@ function SuppliersContent() {
 
   const openForm = () => {
     setShowAdd(true);
-    if (psCompanies.length === 0) setPsCompanies(COS);
   };
 
   const handleCancel = () => {
@@ -154,10 +115,9 @@ function SuppliersContent() {
     return "—";
   };
 
-  /** Real DB count + demo baseline, formatted */
+  /** Real DB count formatted */
   const getProductCount = (s: Supplier): string => {
-    const baseline = PROD_BASELINE[s.slug] ?? 0;
-    const total = s.product_count + baseline;
+    const total = s.product_count;
     if (total === 0) return "0";
     return total >= 1000
       ? `${(total / 1000).toFixed(1)}k`

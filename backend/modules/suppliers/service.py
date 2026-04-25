@@ -22,7 +22,12 @@ async def get_cached_endpoints(db: AsyncSession, supplier_id) -> list[dict]:
             return supplier.endpoint_cache
 
     # Refresh from PS directory API
-    endpoints = await get_ps_endpoints(supplier.promostandards_code)
+    import httpx
+    try:
+        endpoints = await get_ps_endpoints(supplier.promostandards_code)
+    except httpx.HTTPError:
+        endpoints = []
+    
     supplier.endpoint_cache = endpoints
     supplier.endpoint_cache_updated_at = datetime.now(timezone.utc)
     await db.commit()

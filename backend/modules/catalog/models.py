@@ -48,6 +48,9 @@ class Product(Base):
     ops_product_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     external_catalogue: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     last_synced: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    archived_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
 
     variants: Mapped[list["ProductVariant"]] = relationship(
         back_populates="product", cascade="all, delete-orphan"
@@ -139,11 +142,15 @@ class ProductOptionAttribute(Base):
         ForeignKey("product_options.id", ondelete="CASCADE")
     )
     ops_attribute_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    master_attribute_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    attribute_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     title: Mapped[str] = mapped_column(String(255))
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[int] = mapped_column(Integer, default=1)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     price: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    setup_cost: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
+    multiplier: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     numeric_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     overridden_sort: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 

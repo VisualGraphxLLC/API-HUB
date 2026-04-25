@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { PSCompany, Supplier } from "@/lib/types";
 import RevealForm from "@/components/suppliers/reveal-form";
+import { Button } from "@/components/ui/button";
 
 
 
@@ -87,6 +88,19 @@ function SuppliersContent() {
       setSuppliers(suppliers.map((item) => (item.id === updated.id ? updated : item)));
     } catch (err) {
       console.error("Failed to toggle supplier status:", err);
+    }
+  };
+
+  const deleteSupplier = async (s: Supplier) => {
+    if (!confirm(`Delete ${s.name}? This removes the supplier and any cached data. This cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api(`/api/suppliers/${s.id}`, { method: "DELETE" });
+      setSuppliers(suppliers.filter((item) => item.id !== s.id));
+    } catch (err) {
+      console.error("Failed to delete supplier:", err);
+      alert("Delete failed: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
@@ -206,14 +220,34 @@ function SuppliersContent() {
                     </button>
                   </td>
                   <td className="text-right">
-                    <button
-                      onClick={() => triggerSync(s)}
-                      disabled={!s.is_active}
-                      className={`btn btn-ghost !py-1 !px-2 !text-[11px] ${!s.is_active ? "opacity-30 grayscale cursor-not-allowed" : "text-[var(--blue)]"}`}
-                      title="Sync Now"
-                    >
-                      Sync Now ⚡
-                    </button>
+                    <div className="inline-flex items-center gap-2 justify-end">
+                      {(s.protocol === "soap" || s.protocol === "promostandards") && (
+                        <Link href={`/suppliers/${s.id}/import`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#1e4d92] text-[#1e4d92]"
+                          >
+                            Import Products
+                          </Button>
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => triggerSync(s)}
+                        disabled={!s.is_active}
+                        className={`btn btn-ghost !py-1 !px-2 !text-[11px] ${!s.is_active ? "opacity-30 grayscale cursor-not-allowed" : "text-[var(--blue)]"}`}
+                        title="Sync Now"
+                      >
+                        Sync Now ⚡
+                      </button>
+                      <button
+                        onClick={() => deleteSupplier(s)}
+                        className="btn btn-ghost !py-1 !px-2 !text-[11px] text-[#b23a3a] hover:bg-[rgba(178,58,58,0.08)]"
+                        title="Delete supplier"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

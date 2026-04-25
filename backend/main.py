@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import Base, engine, get_db
+from database import Base, ENVIRONMENT, async_session, engine, get_db
 
 # Import all models so SQLAlchemy registers them before create_all
 import modules.suppliers.models  # noqa: F401
@@ -34,6 +34,7 @@ from modules.sync_jobs.routes import router as sync_jobs_router
 from modules.ops_push.routes import router as ops_push_router
 from modules.push_candidates.routes import router as push_candidates_router
 from modules.push_mappings.routes import router as push_mappings_router
+from modules.suppliers.category_import import router as category_import_router
 
 
 # Idempotent schema upgrades. `Base.metadata.create_all` creates new tables
@@ -46,6 +47,8 @@ _SCHEMA_UPGRADES: list[str] = [
     "ALTER TABLE product_option_attributes ADD COLUMN IF NOT EXISTS price NUMERIC(10,2)",
     "ALTER TABLE product_option_attributes ADD COLUMN IF NOT EXISTS numeric_value NUMERIC(10,2)",
     "ALTER TABLE product_option_attributes ADD COLUMN IF NOT EXISTS overridden_sort INTEGER",
+    "ALTER TABLE products ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE NULL",
+    "CREATE INDEX IF NOT EXISTS idx_products_archived_at ON products(archived_at)",
 ]
 
 
@@ -66,6 +69,12 @@ async def lifespan(app: FastAPI):
                 raise e
             print(f"Database not ready... retrying in 2s ({retries} retries left)")
             await asyncio.sleep(2)
+
+    if ENVIRONMENT == "development":
+        from modules.suppliers.demo_seed import ensure_vg_ops_supplier
+
+        async with async_session() as db:
+            await ensure_vg_ops_supplier(db)
     yield
     await engine.dispose()
 
@@ -104,6 +113,7 @@ app.include_router(sync_jobs_router)
 app.include_router(ops_push_router)
 app.include_router(push_candidates_router)
 app.include_router(push_mappings_router)
+app.include_router(category_import_router)
 app.include_router(promostandards_sync_router)
 
 

@@ -66,6 +66,7 @@ class ProductRead(BaseModel):
     ops_product_id: Optional[str]
     external_catalogue: Optional[int] = None
     last_synced: Optional[datetime]
+    archived_at: Optional[datetime] = None
     variants: list[VariantRead] = []
     images: list[ProductImageRead] = []
     options: list[ProductOptionRead] = []
@@ -90,6 +91,7 @@ class ProductListRead(BaseModel):
     price_min: Optional[Decimal] = None
     price_max: Optional[Decimal] = None
     total_inventory: int = 0
+    archived_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 

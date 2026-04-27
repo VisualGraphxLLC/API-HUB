@@ -44,15 +44,8 @@ async def _load_active_supplier(db: AsyncSession, supplier_id: UUID) -> Supplier
 
 
 def _get_auth_config(supplier: Supplier) -> dict:
-    """Return auth_config, overriding with env vars for SanMar if present."""
-    auth = dict(supplier.auth_config or {})
-    if supplier.slug == "sanmar":
-        env_id = os.getenv("SANMAR_ID")
-        env_password = os.getenv("SANMAR_PASSWORD")
-        if env_id and env_password:
-            auth["id"] = env_id
-            auth["password"] = env_password
-    return auth
+    """Return auth_config from the database."""
+    return dict(supplier.auth_config or {})
 
 
 async def _ensure_no_active_job(

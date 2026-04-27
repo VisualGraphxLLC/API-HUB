@@ -1,4 +1,4 @@
-# Vidhi — Product UI Tasks A, B, C, D — Detail Guide
+# Sanmar Product UI Tasks A, B, C, D — Detail Guide
 
 **Status:** ✅ Completed on 2026-04-27
 **Branch:** `Vidhi`

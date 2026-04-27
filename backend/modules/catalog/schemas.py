@@ -155,6 +155,7 @@ class ProductIngest(BaseModel):
     product_type: str = "apparel"
     image_url: Optional[str] = None
     ops_product_id: Optional[str] = None
+    external_catalogue: Optional[int] = None
     category_external_id: Optional[str] = None
     category_name: Optional[str] = None
     variants: list[VariantIngest] = Field(default_factory=list)

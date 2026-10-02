@@ -97,3 +97,11 @@ NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 - **Code review:** `docs/code_review_all_tasks.md` — 3 critical, 3 moderate, 3 minor issues
 
 Current Status (April 16, 2026): V0 is 19/21 done. n8n running in Docker with OnPrintShop node loaded. V1 pipeline plan approved. Waiting on Christian for SanMar API credentials and OPS Postman collection export.
+
+## Claude execution and model policy
+
+Other rules in this repository (this file, `AGENTS.md`) take precedence where they specify a different execution model.
+
+- Don't do substantial work on the main thread. For any non-trivial task (multi-file changes, research, refactors, long edits), dispatch a sub-agent to do it and report back.
+- Work directly only for trivial operations: a single command, a one-line edit, a quick lookup.
+- Match the model to the task: Opus 5.5 for routine work (small edits, boilerplate, simple fixes, formatting, straightforward questions); Fable only for genuinely hard work (complex architecture, tricky debugging, calls where quality really matters). When unsure, start with Opus 5.5 and escalate only if needed.
